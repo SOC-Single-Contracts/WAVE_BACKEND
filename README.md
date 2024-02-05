@@ -2,7 +2,7 @@
 Node.js Backend Server for Wave Wallet.
 
 ## Install
-    $ npm install
+    $ yarn install
 
 ## Configure app
 Configer Google Drive is located at `gdriveapi.json`
@@ -16,4 +16,4 @@ Configer Google Drive is located at `gdriveapi.json`
 - client_x509_cert_url;
 
 ## Running the project
-    $ npm start
+    $ yarn start
