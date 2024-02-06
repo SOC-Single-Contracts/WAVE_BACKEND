@@ -7,7 +7,7 @@ exports.uploadJson = async (req, res) =>{
         
         await uploadFile(file);
         return res.status(200).json({message: "File has been uploaded"})
-    } catch (e) {
-        return res.status(500).json({message: "Internal server error"});
+    } catch (error) {
+        return res.status(500).json({message: "Internal server error",error : error.message});
     }
 };

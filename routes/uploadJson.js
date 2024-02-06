@@ -7,9 +7,6 @@ const upload = multer({
     const ext = path.extname(file.originalname)
     if ( ext !== '.json') {
         return cb(new Error('Invalid mime type'));
-        // return cb(JSON.stringify({ "success": false, "message": "invalid  type" }), false);
-
-        // return cb(res.status(400).end('Error only json files can be uploaded'), false);
     }
     cb(null,true)
 }})
