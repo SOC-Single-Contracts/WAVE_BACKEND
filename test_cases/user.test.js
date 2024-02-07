@@ -16,14 +16,10 @@ describe("Api Testing", () => {
     //   await mongoose.connection.close();
     // })
     
-    test("Insert JSON File in to Google Drive", async () => {
+    test("Craete Evm Wallet", async () => {
       const response = await supertest(app)
-        .post("/api/upload_files")
-        .send({
-            file: FileJSON
-        });
+        .post("/api/evm/create/wallet").send();
         expect(response.statusCode).toBe(200);
-   
     });
 
   });

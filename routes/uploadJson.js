@@ -12,7 +12,7 @@ const upload = multer({
 }})
 
 let {uploadJson} = require('../controllers/uploadJson')
-
 router.post('/',upload.single("file"),uploadJson)
+
 
 module.exports = router
