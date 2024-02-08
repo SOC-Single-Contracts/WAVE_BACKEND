@@ -9,7 +9,7 @@ const axios = require("axios");
 const fetch = require('node-fetch');
 const connection = new Connection(process.env.SOL_NETWORK);
 const { encrypt, decrypt } = require("../jwt.config");
-
+const { getSolTrx } = require("./../solscan_scrapper")
 
 exports.createWallet = async (req, res) => {
   try {
@@ -123,6 +123,64 @@ exports.import_erc20 = async (req, res) => {
   }
 };
 
+exports.send_erc20 = async (req, res) => {
+  try {
+    const { privateKey, recipientAddress, tokenAddress, amount } = req.body;
+    const connection = new Connection(process.env.SOL_NETWORK, "confirmed");
+    const key = privateKey;
+    const privateKeyUint8Array = bs58.decode(key);
+    const senderKeyPair = Keypair.fromSecretKey(privateKeyUint8Array);
+    const senderTokenAccount = await getOrCreateAssociatedTokenAccount(
+      connection,
+      senderKeyPair,
+      new PublicKey(tokenAddress),
+      senderKeyPair.publicKey
+    );
+    const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+      connection,
+      senderKeyPair,
+      new PublicKey(tokenAddress),
+      new PublicKey(recipientAddress)
+    );
+    const signature = await transfer(
+      connection,
+      senderKeyPair,
+      senderTokenAccount.address,
+      recipientTokenAccount.address,
+      senderKeyPair.publicKey,
+      amount
+    );
+    res.json(signature);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.send = async (req, res) =>{
+  try {
+    const { privateKey, recipientAddress, amount } = req.body;
+    const key = privateKey
+    const privateKeyUint8Array = bs58.decode(key);
+    const senderKeyPair = Keypair.fromSecretKey(privateKeyUint8Array);
+    const connection = new Connection(process.env.SOL_NETWORK, 'confirmed');
+    const transaction = new Transaction().add(
+        SystemProgram.transfer({
+            fromPubkey: senderKeyPair.publicKey,
+            toPubkey: new PublicKey(recipientAddress),
+            lamports: amount,
+        }),
+    );
+    const transactionId = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        [senderKeyPair],
+    );
+    res.json({ success: true, transactionId: transactionId });
+  } catch (error) {
+      res.status(500).json({ error: error });
+  }
+}
+
 exports.balance = async (req, res) => {
   const { address } = req.body;
   if (typeof address !== 'string' || address.trim() === '') {
@@ -141,3 +199,29 @@ exports.balance = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.transaction = async (req, res) =>{
+  try {
+    let { address } = req.body;
+    if (!address) {
+      return res.status(400).json({ error: 'Wallet address is required as a query parameter.' });
+    }
+    const walletAddress = new PublicKey(address);
+    const transactions = await connection.getConfirmedSignaturesForAddress2(walletAddress, {
+      limit: 10,
+    });
+    // const transactionDetails = await Promise.all(
+    //     transactions.map(async (trx) => {
+    //       const signature = trx.signature;
+    //       const transaction = await getSignatureDetailsWithRetry(signature);
+    //       return transaction;
+    //     })
+    //   );
+    // getSolTrx(signature)
+    
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}

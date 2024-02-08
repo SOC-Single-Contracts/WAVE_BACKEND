@@ -9,5 +9,8 @@ router.post('/import/mnemonic',SOL.importAccount_Memonic)
 router.post('/import/privateKey',SOL.importAccount_PrivateKey)
 router.post('/import/erc20',SOL.import_erc20)
 router.post('/get/balance',SOL.balance)
+router.post('/send/erc20',SOL.send_erc20)
+router.post('/send',SOL.send)
+router.post('/transaction',SOL.transaction)
 
 module.exports = router
