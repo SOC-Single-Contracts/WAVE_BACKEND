@@ -3,19 +3,19 @@ const puppeteer = require("puppeteer");
 async function getSolTrx(token) {
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: "/usr/bin/chromium-browser",
-    args: [
-      "--disable-gpu",
-      "--disable-setuid-sandbox",
-      "--no-sandbox",
-      "--no-zygote",
-    ],
+    // executablePath: "/usr/bin/chromium-browser",
+    // args: [
+    //   "--disable-gpu",
+    //   "--disable-setuid-sandbox",
+    //   "--no-sandbox",
+    //   "--no-zygote",
+    // ],
   });
   const page = await browser.newPage();
   await page.setViewport({ width: 0, height: 0 });
   await page.goto(`https://solscan.io/tx/${token}`);
   await page.waitForNetworkIdle();
-  await page.waitForSelector(".dark-mode-box > div > div > .tx-account");
+  await page.waitForSelector(".dark-mode-box > div > div > .tx-account", { timeout: 60000, visible: true });
   // For Overview
   const data = await page.evaluate(() => {
     const elArray = Array(

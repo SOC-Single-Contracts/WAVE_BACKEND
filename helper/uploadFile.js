@@ -13,7 +13,6 @@ const auth = new google.auth.GoogleAuth({
 
 
 const uploadFile = async (fileObject) => {
-    console.log(fileObject)
     const bufferStream = new stream.PassThrough();
     bufferStream.end(fileObject.buffer);
     const { data } = await google.drive({ version: "v3", auth }).files.create({

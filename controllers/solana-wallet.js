@@ -130,6 +130,7 @@ exports.send_erc20 = async (req, res) => {
     const key = privateKey;
     const privateKeyUint8Array = bs58.decode(key);
     const senderKeyPair = Keypair.fromSecretKey(privateKeyUint8Array);
+
     const senderTokenAccount = await getOrCreateAssociatedTokenAccount(
       connection,
       senderKeyPair,
@@ -148,11 +149,11 @@ exports.send_erc20 = async (req, res) => {
       senderTokenAccount.address,
       recipientTokenAccount.address,
       senderKeyPair.publicKey,
-      amount
+      amount 
     );
     res.json(signature);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error });
   }
 };
 
@@ -210,16 +211,14 @@ exports.transaction = async (req, res) =>{
     const transactions = await connection.getConfirmedSignaturesForAddress2(walletAddress, {
       limit: 10,
     });
-    // const transactionDetails = await Promise.all(
-    //     transactions.map(async (trx) => {
-    //       const signature = trx.signature;
-    //       const transaction = await getSignatureDetailsWithRetry(signature);
-    //       return transaction;
-    //     })
-    //   );
-    // getSolTrx(signature)
-    
-    res.json(transactions);
+    const transactionDetails = await Promise.all(
+      transactions.map(async (trx) => {
+        const signature = trx.signature;
+        const transaction = await getSolTrx(signature);
+        return transaction;
+      })
+    );
+    res.json(transactionDetails);
   } catch (error) {
     console.error('Error fetching transactions:', error);
     res.status(500).json({ error: 'Internal server error' });
