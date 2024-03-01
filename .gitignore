@@ -1,3 +1,6 @@
-/node_modules
-Created
-Created_uplode_json_file_into_google-drive_functionality'
+# Dependency directories
+node_modules/
+
+# Envormental Var
+.env
+
