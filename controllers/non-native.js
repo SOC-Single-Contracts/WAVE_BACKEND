@@ -371,7 +371,7 @@ class NonNative {
           specificTokenPublicKey,
           publicKey
         );
-    
+          
         const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
         if (accountInfo) {
           const accountData = AccountLayout.decode(accountInfo.data);
@@ -393,7 +393,7 @@ class NonNative {
     
           res.json({token: tokenDetails});
         } else {
-          res.status(404).json({ error: 'Token account not found.' });
+          res.status(404).json({ error: 'Solana Network Error' });
         }
       } catch (error) {
         res.status(500).json({ error: error.message });
