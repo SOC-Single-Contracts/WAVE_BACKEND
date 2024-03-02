@@ -7,8 +7,8 @@ const puppeteer = require('puppeteer')
 async function getSolScan(token) {
     const browser = await puppeteer.launch({
       headless: true,
-      executablePath: '/usr/bin/chromium-browser',
-      args: [ '--disable-gpu', '--disable-setuid-sandbox', '--no-sandbox', '--no-zygote' ]
+      // executablePath: '/usr/bin/chromium-browser',
+      // args: [ '--disable-gpu', '--disable-setuid-sandbox', '--no-sandbox', '--no-zygote' ]
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 0, height: 0});

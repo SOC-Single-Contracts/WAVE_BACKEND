@@ -332,7 +332,7 @@ class wallet {
 
       // Make the API request
       const response = await axios.get(apiUrl);
-
+      console.log(">>>>>>>>>>",response)
       if (response.status !== 200 || !response.data || response.data.status !== '1') {
         throw new Error('Failed to fetch transactions.');
       }
