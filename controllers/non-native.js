@@ -7,6 +7,7 @@ const fetch = require('node-fetch');
 const { verifyToken } = require("../jwt_encryption");
 const { getAssociatedTokenAddress } = require("@solana/spl-token");
 const connection = new Connection(process.env.SOL_NETWORK);
+const axios = require('axios');
 
 async function findTokenByContractAddress(contractAddress) {
     try {
