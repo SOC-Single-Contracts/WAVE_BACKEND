@@ -379,7 +379,7 @@ class NonNative {
           const address = new PublicKey(accountData.mint).toString()
           const tokenInfo = await connection.getParsedAccountInfo(new PublicKey(address));
           const decimals = tokenInfo.value.data.parsed.info.decimals;
-          const balance = (Number(accountData.amount.toString()) / 10 ** Number(decimals));
+          const balance = (Number(accountData?.amount.toString()) / 10 ** Number(decimals));
           const coingeckoResponse = await axios.get(`https://api.coingecko.com/api/v3/coins/solana/contract/${erc20_address}`);
           const coinlogo = coingeckoResponse.data.image ? coingeckoResponse.data.image.large : 'https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n';
           const tokenDetails = {
