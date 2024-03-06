@@ -337,7 +337,7 @@ class wallet {
       }
 
       // Extract and format transaction details
-      const transactions = response.data.result.slice(0, 10).map((tx) => ({
+      const transactions = response.data.result.slice(0, 50).map((tx) => ({
         to: tx.to,
         from: tx.from,
         status: tx.txreceipt_status === '1' ? 'Success' : 'Failed',
