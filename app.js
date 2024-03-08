@@ -63,7 +63,7 @@ const mongodb = require('./controllers/user');
 
 
 // soalan_routes
-app.post('/create-wallet', wallet.createAccount);
+app.get('/create-wallet', wallet.createAccount);
 app.post('/create-new-account', wallet.createNewAccount);
 app.post('/wallet-ballance', wallet.getBalance);
 app.post('/token-list', nonNative.List); 
