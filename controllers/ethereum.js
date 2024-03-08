@@ -222,53 +222,62 @@ class wallet {
     }
 
     async sendNonNative(req, res) {
-        try {
-          const { privateKey, recipientAddress, amount, tokenAddress, chain } = req.body;
+      let responseSent = false; // Declare `responseSent` at the top of the function scope
   
-          const providerUrl = chain;
-          const AddressRegex = /^(0x)?[A-Fa-f0-9]{40}$/;
+      try {
+        const { privateKey, recipientAddress, amount, tokenAddress, chain } = req.body;
+        const providerUrl = chain;
+        const AddressRegex = /^(0x)?[A-Fa-f0-9]{40}$/;
+    
+        if (!providerUrl) {
+          return res.status(400).json({ error: 'Unsupported chain' });
+        }
+    
+        if (!AddressRegex.test(recipientAddress)) {
+          return res.status(400).send({ error: "Address is not valid" });
+        }
+    
+        const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
+        const key = verifyToken(privateKey)
+        const accountSender = web3.eth.accounts.privateKeyToAccount(key);
+        const amountWei = amount // web3.utils.toWei(amount, "ether").toString();
       
-          if (!providerUrl) {
-            return res.status(400).json({ error: 'Unsupported chain' });
-          }
-      
-          if (!AddressRegex.test(recipientAddress)) {
-            return res.status(400).send({ error: "Address is not valid" });
-          }
-      
-          const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
-          const key = await verifyToken(privateKey)
-          const accountSender = web3.eth.accounts.privateKeyToAccount(key);
-          const amountWei = web3.utils.toWei(amount, "ether").toString();
-      
-          const contract = new web3.eth.Contract(abi, tokenAddress);
-      
-          const gasPrice = await web3.eth.getGasPrice();
-      
-          const tx = {
-            from: accountSender.address,
-            to: tokenAddress,
-            gas: 2000000,
-            gasPrice: gasPrice,
-            data: contract.methods.transfer(recipientAddress, amountWei).encodeABI()
-          };
+        const contract = new web3.eth.Contract(abi, tokenAddress);
   
-          const signedTx = await web3.eth.accounts.signTransaction(tx, key);
-
-          await web3.eth.sendSignedTransaction(signedTx.rawTransaction)
-            .on('receipt', receipt => {
+        const gasPrice = await web3.eth.getGasPrice();
+  
+        const tx = {
+          from: accountSender.address,
+          to: tokenAddress,
+          gas: 2000000,
+          gasPrice: gasPrice,
+          data: contract.methods.transfer(recipientAddress, amountWei).encodeABI()
+        };
+        const signedTx = await web3.eth.accounts.signTransaction(tx, key);
+        console.log(">>>signedTx",signedTx?.transactionHash);
+  
+        await web3.eth.sendSignedTransaction(signedTx?.rawTransaction)
+          .on('receipt', receipt => {
+              if (!responseSent) {
                 const serializedReceipt = JSON.stringify(receipt, (key, value) =>
-                typeof value === 'bigint' ? value.toString() : value
-              );
-              res.status(200).send(JSON.parse(serializedReceipt));
-            })
-            .on('error', error => {
-              res.status(400).send({ error: error.message });
-            });
-        } catch (error) {
+                typeof value === 'bigint' ? value.toString() : value);
+                res.status(200).send(JSON.parse(serializedReceipt));
+                responseSent = true; // Update the flag
+              }
+          })
+          .on('error', error => {
+              if (!responseSent) {
+                res.status(400).send({ error: error.message });
+                responseSent = true; // Update the flag
+              }
+          });
+      } catch (error) {
+        if (!responseSent) {
           res.status(500).send({ error: error.message });
         }
-    }
+      }
+  }
+  
 
     async sendNonNative721(req, res) {
       const { chain, privateKey, recipientAddress, contractAddress, tokenId } = req.body;
@@ -379,6 +388,7 @@ class wallet {
                         const coingeckoResponse = await axios.get(`https://api.coingecko.com/api/v3/coins/${network_name}/contract/${erc20_address}`);
                         const coinlogo = coingeckoResponse.data.image ? coingeckoResponse.data.image.large : 'https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n';
                         const decimals = await contract.methods.decimals().call();
+                        
                         const data = {
                             balance: value.toString(),
                             token_address: erc20_address,
@@ -392,7 +402,22 @@ class wallet {
                         };
                         return res.status(200).send({ message: "ERC20 Import", data });
                     } catch (error) {
-                        console.log("Error fetching token image from CoinGecko:", error);
+                        const coinlogo = 'https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n';
+                        const decimals = await contract.methods.decimals().call();
+                        const name = await contract.methods.name().call();
+                        const data = {
+                            balance: value.toString(),
+                            token_address: erc20_address,
+                            wallet_address: address,
+                            symbol: symbol,
+                            decimals: decimals.toString(),
+                            rpc: chain,
+                            logo: coinlogo,
+                            coingekoId:name.toString(),
+                            name:name.toString(),
+                        };
+                        return res.status(200).send({ message: "ERC20 Import", data });
+                        // console.log("Error fetching token image from CoinGecko:", error);
                     }
                 });
         })
@@ -404,6 +429,102 @@ class wallet {
         res.status(500).send({ error: error.message });
     }
     }
+    async getEstimatedGas(req, res) {
+      try {
+          const { to, from, amount, chain } = req.body;
+          // console.log(to, from, amount, chain);
+          const web3 = new Web3(new Web3.providers.HttpProvider(chain));
+  
+          const txObject = {
+              from: from,
+              to: to,
+              value: web3.utils.toWei(amount, 'ether'),
+          }
+          // console.log(txObject);
+  
+          // Estimate the gas
+          const gasEstimate = await web3.eth.estimateGas(txObject);
+          // console.log(`Estimated Gas: ${gasEstimate}`);
+  
+          // Get the current gas price
+          const gasPrice = await web3.eth.getGasPrice();
+  
+          // Calculate the gas fee in Wei and then convert to Ether
+          // console.log(gasPrice)
+          // console.log(gasEstimate)
+          const gasFeeInWei = BigInt(gasEstimate) * BigInt(gasPrice);
+          const gasFeeInEther = web3.utils.fromWei(gasFeeInWei.toString(), 'ether');
+  
+          // Send the response
+          res.status(200).send({
+              // message: `Estimated Gas: ${gasEstimate}`,
+              gas_price: `${BigInt(gasPrice)}`,
+              gas_fee: `${BigInt(gasEstimate)}`,
+              gasFeeInEther: gasFeeInEther
+          });
+  
+      } catch (error) {
+          console.error(error);
+          // Handle known error types more gracefully
+          if (error.code === -32000) {
+              res.status(400).send({ error: "Insufficient funds for gas" });
+          } else {
+              // For other unhandled errors, send a generic error response
+              res.status(500).send({ error: error.message || "An unexpected error occurred." });
+          }
+      }
+  }
+  async getEstimatedGasToken(req, res) {
+    try {
+        const { to, from, amount, chain,tokenAdd } = req.body;
+        // console.log(to, from, amount, chain);
+        const web3 = new Web3(new Web3.providers.HttpProvider(chain));
+
+   const contract = new web3.eth.Contract(abi, tokenAdd);
+    
+        // Estimate the gas
+        // const gasEstimate = await web3.eth.estimateGas(txObject);
+        // console.log(`Estimated Gas: ${gasEstimate}`);
+        let gasEstimate;
+        await contract.methods.transfer(to,amount).estimateGas({from: from})
+        .then(function(gasAmount){
+          gasEstimate = gasAmount;
+        })
+        .catch(function(error){
+            console.log(error)
+        });
+     //   gasEstimate = 46109;
+        console.log(gasEstimate,"gas")
+        // Get the current gas price
+        const gasPrice = await web3.eth.getGasPrice();
+
+        // Calculate the gas fee in Wei and then convert to Ether
+        // console.log(gasPrice)
+        // console.log(gasEstimate)
+        const gasFeeInWei = BigInt(gasEstimate) * BigInt(gasPrice);
+        const gasFeeInEther = web3.utils.fromWei(gasFeeInWei.toString(), 'ether');
+
+        // Send the response
+        res.status(200).send({
+            // message: `Estimated Gas: ${gasEstimate}`,
+            gas_price: `${BigInt(gasPrice)}`,
+            gas_fee: `${BigInt(gasEstimate)}`,
+            gasFeeInEther: gasFeeInEther
+        });
+
+    } catch (error) {
+        console.error(error);
+        // Handle known error types more gracefully
+        if (error.code === -32000) {
+            res.status(400).send({ error: "Insufficient funds for gas" });
+        } else {
+            // For other unhandled errors, send a generic error response
+            res.status(500).send({ error: error.message || "An unexpected error occurred." });
+        }
+    }
+}
+
+  
   
 }
 

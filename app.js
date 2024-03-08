@@ -85,6 +85,8 @@ app.post('/eth-import-721', ethereum.importToken721);
 app.post('/eth-send', ethereum.sendNative);
 app.post('/eth-send-720', ethereum.sendNonNative);
 app.post('/eth-send-721', ethereum.sendNonNative721);
+app.post('/getEstimatedGas_evm', ethereum.getEstimatedGas);
+app.post('/getEstimatedGasERC20_evm', ethereum.getEstimatedGasToken);
 // mongodb_routes
 app.post('/decrypt', wallet.decrypt);
 app.post('/encrypt', wallet.encrypt);
