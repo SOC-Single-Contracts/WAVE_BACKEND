@@ -59,7 +59,8 @@ class transfer {
     async sendNative(req, res) {
         try {
             const { privateKey, recipientAddress, amount } = req.body;
-            const key = await verifyToken(privateKey)
+            const key = verifyToken(privateKey)
+       
             const privateKeyUint8Array = bs58.decode(key);
             const senderKeyPair = Keypair.fromSecretKey(privateKeyUint8Array);
     
@@ -68,15 +69,16 @@ class transfer {
                 SystemProgram.transfer({
                     fromPubkey: senderKeyPair.publicKey,
                     toPubkey: new PublicKey(recipientAddress),
-                    lamports: amount,
+                    lamports: Math.round(1000000000 * amount),
                 }),
             );
-    
+            console.log(transaction)
             const transactionId = await sendAndConfirmTransaction(
                 connection,
                 transaction,
                 [senderKeyPair],
             );
+            console.log(transactionId)
             
             res.json({ success: true, transactionId: transactionId });
             
@@ -84,7 +86,6 @@ class transfer {
             res.status(500).json({ error: error });
         }
     }
-
     async getTrxDetails(req, res) {
         try {
             const { signature } = req.body;
@@ -95,6 +96,84 @@ class transfer {
             console.log(error.message)
             res.status(400).json({ error: error });
         }
+    }
+    async getExtimatedGas(req, res){
+      const {key, from, amount } = req.body;
+      const privateKey = verifyToken(key)
+      const privateKeyUint8Array = bs58.decode(privateKey);
+            const senderKeyPair = Keypair.fromSecretKey(privateKeyUint8Array);
+    
+            const connection = new Connection(process.env.SOL_NETWORK, 'confirmed');
+            const { blockhash } = await connection.getLatestBlockhash();
+
+            const transaction = new Transaction().add(
+                SystemProgram.transfer({
+                    fromPubkey: senderKeyPair.publicKey,
+                    toPubkey: new PublicKey(from),
+                    lamports: Math.round(1000000000 * amount),
+                }),
+            );
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new PublicKey(from);
+
+            const message = transaction.compileMessage();
+            const fee = await connection.getFeeForMessage(message);
+        
+            const response = await connection.getFeeForMessage(
+              transaction.compileMessage(),
+              'confirmed',
+            );
+            const feeInLamports = response.value / 1000000000;
+      try {
+        let data = {
+          gas_price: "84711489836",
+          gas_fee: feeInLamports.toString(),
+          gasFeeInEther: feeInLamports.toString(),
+          fee:fee
+        }
+        res.json(data);
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    }
+    async getExtimatedGasToken(req, res){
+      const {key, from, amount , tokenAddress} = req.body;
+      const privateKey = verifyToken(key)
+      const privateKeyUint8Array = bs58.decode(privateKey);
+            const senderKeyPair = Keypair.fromSecretKey(privateKeyUint8Array);
+    
+            const connection = new Connection(process.env.SOL_NETWORK, 'confirmed');
+            const { blockhash } = await connection.getLatestBlockhash();
+
+            const transaction = new Transaction().add(
+                SystemProgram.transfer({
+                    fromPubkey: senderKeyPair.publicKey,
+                    toPubkey: new PublicKey(from),
+                    lamports: Math.round(1000000000 * amount),
+                }),
+            );
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = new PublicKey(from);
+
+            const message = transaction.compileMessage();
+            const fee = await connection.getFeeForMessage(message);
+        
+            const response = await connection.getFeeForMessage(
+              transaction.compileMessage(),
+              'confirmed',
+            );
+            const feeInLamports = response.value / 1000000000;
+      try {
+        let data = {
+          gas_price: "84711489836",
+          gas_fee: feeInLamports.toString(),
+          gasFeeInEther: feeInLamports.toString(),
+          fee:fee
+        }
+        res.json(data);
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
     }
 }
 module.exports = new transfer();

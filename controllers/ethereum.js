@@ -474,55 +474,55 @@ class wallet {
           }
       }
   }
-  async getEstimatedGasToken(req, res) {
-    try {
-        const { to, from, amount, chain,tokenAdd } = req.body;
-        // console.log(to, from, amount, chain);
-        const web3 = new Web3(new Web3.providers.HttpProvider(chain));
+    async getEstimatedGasToken(req, res) {
+      try {
+          const { to, from, amount, chain,tokenAdd } = req.body;
+          // console.log(to, from, amount, chain);
+          const web3 = new Web3(new Web3.providers.HttpProvider(chain));
 
-   const contract = new web3.eth.Contract(abi, tokenAdd);
-    
-        // Estimate the gas
-        // const gasEstimate = await web3.eth.estimateGas(txObject);
-        // console.log(`Estimated Gas: ${gasEstimate}`);
-        let gasEstimate;
-        await contract.methods.transfer(to,amount).estimateGas({from: from})
-        .then(function(gasAmount){
-          gasEstimate = gasAmount;
-        })
-        .catch(function(error){
-            console.log(error)
-        });
-     //   gasEstimate = 46109;
-        console.log(gasEstimate,"gas")
-        // Get the current gas price
-        const gasPrice = await web3.eth.getGasPrice();
+    const contract = new web3.eth.Contract(abi, tokenAdd);
+      
+          // Estimate the gas
+          // const gasEstimate = await web3.eth.estimateGas(txObject);
+          // console.log(`Estimated Gas: ${gasEstimate}`);
+          let gasEstimate;
+          await contract.methods.transfer(to,amount).estimateGas({from: from})
+          .then(function(gasAmount){
+            gasEstimate = gasAmount;
+          })
+          .catch(function(error){
+              console.log(error)
+          });
+      //   gasEstimate = 46109;
+          // console.log(gasEstimate,"gas")
+          // Get the current gas price
+          const gasPrice = await web3.eth.getGasPrice();
 
-        // Calculate the gas fee in Wei and then convert to Ether
-        // console.log(gasPrice)
-        // console.log(gasEstimate)
-        const gasFeeInWei = BigInt(gasEstimate) * BigInt(gasPrice);
-        const gasFeeInEther = web3.utils.fromWei(gasFeeInWei.toString(), 'ether');
+          // Calculate the gas fee in Wei and then convert to Ether
+          // console.log(gasPrice)
+          // console.log(gasEstimate)
+          const gasFeeInWei = BigInt(gasEstimate) * BigInt(gasPrice);
+          const gasFeeInEther = web3.utils.fromWei(gasFeeInWei.toString(), 'ether');
 
-        // Send the response
-        res.status(200).send({
-            // message: `Estimated Gas: ${gasEstimate}`,
-            gas_price: `${BigInt(gasPrice)}`,
-            gas_fee: `${BigInt(gasEstimate)}`,
-            gasFeeInEther: gasFeeInEther
-        });
+          // Send the response
+          res.status(200).send({
+              // message: `Estimated Gas: ${gasEstimate}`,
+              gas_price: `${BigInt(gasPrice)}`,
+              gas_fee: `${BigInt(gasEstimate)}`,
+              gasFeeInEther: gasFeeInEther
+          });
 
-    } catch (error) {
-        console.error(error);
-        // Handle known error types more gracefully
-        if (error.code === -32000) {
-            res.status(400).send({ error: "Insufficient funds for gas" });
-        } else {
-            // For other unhandled errors, send a generic error response
-            res.status(500).send({ error: error.message || "An unexpected error occurred." });
-        }
-    }
-}
+      } catch (error) {
+          console.error(error);
+          // Handle known error types more gracefully
+          if (error.code === -32000) {
+              res.status(400).send({ error: "Insufficient funds for gas" });
+          } else {
+              // For other unhandled errors, send a generic error response
+              res.status(500).send({ error: error.message || "An unexpected error occurred." });
+          }
+      }
+  }
 
   
   

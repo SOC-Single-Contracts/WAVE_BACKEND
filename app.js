@@ -75,6 +75,8 @@ app.post('/imp_tokenerc_20', nonNative.impTokenErc20);
 app.post('/import-with-Key', wallet.importAccount);
 app.post('/import-with-mnemonic', wallet.importAccountFromMnemonic);
 app.post('/get-solTrx-details', transfer.getTrxDetails);
+app.post('/getEstimatedGas_sol', transfer.getExtimatedGas);
+app.post('/getEstimatedGas_soltoken', transfer.getExtimatedGasToken);
 // ethereum_routes
 app.post('/eth-create-account', ethereum.createAccount);
 app.post('/eth-getbalance', ethereum.getBalance);
