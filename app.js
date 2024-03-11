@@ -39,18 +39,18 @@ app.use((req, res, next) => {
 
 // Middleware for rate limiting
 app.use((req, res, next) => {
-const now = Date.now();
-// Remove requests from the queue that are outside of the rate limit window
-while (requestQueue.length > 0 && requestQueue[0] < now - RATE_LIMIT_WINDOW_MS) {
-requestQueue.shift();
-}
-// If the number of requests in the queue exceeds the rate limit, respond with 429
-if (requestQueue.length >= MAX_REQUESTS_PER_MINUTE) {
-return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
-}
-requestQueue.push(now);
-next();
-});
+    const now = Date.now();
+    // Remove requests from the queue that are outside of the rate limit window
+    while (requestQueue.length > 0 && requestQueue[0] < now - RATE_LIMIT_WINDOW_MS) {
+      requestQueue.shift();
+    }
+    // If the number of requests in the queue exceeds the rate limit, respond with 429
+    if (requestQueue.length >= MAX_REQUESTS_PER_MINUTE) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+    }
+    requestQueue.push(now);
+    next();
+  });
 
 // controllers
 const nonNative = require('./controllers/non-native');
