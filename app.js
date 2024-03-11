@@ -108,5 +108,5 @@ app.put('/change-password', mongodb.changePassword);
 
 
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+    console.log(`Server is running on http://localhost:${port}`);
 });
