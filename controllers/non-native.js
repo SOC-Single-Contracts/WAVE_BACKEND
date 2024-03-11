@@ -7,6 +7,7 @@ const fetch = require('node-fetch');
 const { verifyToken } = require("../jwt_encryption");
 const { getAssociatedTokenAddress } = require("@solana/spl-token");
 const connection = new Connection(process.env.SOL_NETWORK);
+const axios = require('axios');
 
 async function findTokenByContractAddress(contractAddress) {
     try {
@@ -145,9 +146,10 @@ class NonNative {
     async sendNonNative(req, res) {
         try {
             const { privateKey, recipientAddress, tokenMintAddress, amount } = req.body;
-    
+
             const connection = new Connection(process.env.SOL_NETWORK, 'confirmed');
-            const key = await verifyToken(privateKey)
+            const key = verifyToken(privateKey)
+
             const privateKeyUint8Array = bs58.decode(key);
             const senderKeyPair = Keypair.fromSecretKey(privateKeyUint8Array);
     
@@ -158,7 +160,7 @@ class NonNative {
                 new PublicKey(tokenMintAddress),
                 senderKeyPair.publicKey
             );
-    
+           
             // Get or create the recipient's token account
             const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
                 connection,
@@ -166,7 +168,7 @@ class NonNative {
                 new PublicKey(tokenMintAddress),
                 new PublicKey(recipientAddress)
             );
-    
+ 
             // Transfer the tokens
             const signature = await transfer(
                 connection,
@@ -176,7 +178,7 @@ class NonNative {
                 senderKeyPair.publicKey,
                 amount
             );
-    
+         
             res.json({ success: true, txid: signature });
         } catch (error) {
             res.status(500).json({ error: error });
@@ -374,11 +376,12 @@ class NonNative {
           
         const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
         if (accountInfo) {
+          try{
           const accountData = AccountLayout.decode(accountInfo.data);
           const address = new PublicKey(accountData.mint).toString()
           const tokenInfo = await connection.getParsedAccountInfo(new PublicKey(address));
           const decimals = tokenInfo.value.data.parsed.info.decimals;
-          const balance = (Number(accountData.amount.toString()) / 10 ** Number(decimals));
+          const balance = (Number(accountData?.amount.toString()) / 10 ** Number(decimals));
           const coingeckoResponse = await axios.get(`https://api.coingecko.com/api/v3/coins/solana/contract/${erc20_address}`);
           const coinlogo = coingeckoResponse.data.image ? coingeckoResponse.data.image.large : 'https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n';
           const tokenDetails = {
@@ -390,8 +393,29 @@ class NonNative {
             symbol:coingeckoResponse.data.symbol.toString(),
             name:coingeckoResponse.data.name.toString(),
           };
-    
-          res.json({token: tokenDetails});
+          res.json({token: tokenDetails});}
+          catch(error){
+            const accountData = AccountLayout.decode(accountInfo.data);
+            const address = new PublicKey(accountData.mint).toString()
+            const tokenInfo = await connection.getParsedAccountInfo(new PublicKey(address));
+            const decimals = tokenInfo.value.data.parsed.info.decimals;
+            const balance = (Number(accountData?.amount.toString()) / 10 ** Number(decimals));
+            const tokens = await new TokenListProvider().resolve();
+            const tokenList = tokens.filterByClusterSlug('mainnet-beta').getList();
+            const tokenData = tokenList.find((token) => token.address === erc20_address);
+            console.log(tokenData)
+            const coinlogo = tokenData.logoURI ? tokenData.logoURI : 'https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n';
+            const tokenDetails = {
+              address: address,
+              balance: balance,
+              decimals: decimals,
+              logo : coinlogo,
+              coingekoId:tokenData?.name,
+              symbol:tokenData.symbol,
+              name:tokenData.name,
+            };
+            res.json({token: tokenDetails});
+          }
         } else {
           res.status(404).json({ error: 'Solana Network Error' });
         }
@@ -399,5 +423,6 @@ class NonNative {
         res.status(500).json({ error: error.message });
       }
     }
+
 }
 module.exports = new NonNative();

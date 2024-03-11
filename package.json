@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "start": "node app.js"
   },
   "author": "",
   "license": "ISC",
@@ -16,7 +16,7 @@
     "@solana/spl-token-registry": "^0.2.4574",
     "@solana/web3.js": "^1.87.6",
     "alchemy-sdk": "^3.0.0",
-    "axios": "^1.6.2",
+    "axios": "^1.6.7",
     "bip32": "^4.0.0",
     "bip39": "^3.1.0",
     "body-parser": "^1.20.2",

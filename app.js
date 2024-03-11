@@ -13,7 +13,7 @@ mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
-
+console.log(process.env.MONGO_URI)
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
@@ -64,7 +64,7 @@ const mongodb = require('./controllers/user');
 
 
 // soalan_routes
-app.post('/create-wallet', wallet.createAccount);
+app.get('/create-wallet', wallet.createAccount);
 app.post('/create-new-account', wallet.createNewAccount);
 app.post('/wallet-ballance', wallet.getBalance);
 app.post('/token-list', nonNative.List); 
@@ -78,6 +78,8 @@ app.post('/import-with-mnemonic', wallet.importAccountFromMnemonic);
 app.post('/solana-swap', solanaSwap.solanaSwap);
 
 app.post('/get-solTrx-details', transfer.getTrxDetails);
+app.post('/getEstimatedGas_sol', transfer.getExtimatedGas);
+app.post('/getEstimatedGas_soltoken', transfer.getExtimatedGasToken);
 // ethereum_routes
 app.post('/eth-create-account', ethereum.createAccount);
 app.post('/eth-getbalance', ethereum.getBalance);
@@ -88,6 +90,8 @@ app.post('/eth-import-721', ethereum.importToken721);
 app.post('/eth-send', ethereum.sendNative);
 app.post('/eth-send-720', ethereum.sendNonNative);
 app.post('/eth-send-721', ethereum.sendNonNative721);
+app.post('/getEstimatedGas_evm', ethereum.getEstimatedGas);
+app.post('/getEstimatedGasERC20_evm', ethereum.getEstimatedGasToken);
 // mongodb_routes
 app.post('/decrypt', wallet.decrypt);
 app.post('/encrypt', wallet.encrypt);
