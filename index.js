@@ -13,7 +13,7 @@ mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
-
+console.log(process.env.MONGO_URI)
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
@@ -64,7 +64,7 @@ const mongodb = require('./controllers/user');
 
 
 // soalan_routes
-app.post('/create-wallet', wallet.createAccount);
+app.get('/create-wallet', wallet.createAccount);
 app.post('/create-new-account', wallet.createNewAccount);
 app.post('/wallet-ballance', wallet.getBalance);
 app.post('/token-list', nonNative.List); 
