@@ -30,11 +30,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Enable CORS for all routes
 app.use((req, res, next) => {
-const allowedOrigin = process.env.ALLOW_ORIGIN;
-res.header('Access-Control-Allow-Origin', allowedOrigin);
-res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-next();
+    const allowedOrigin = process.env.ALLOW_ORIGIN;
+    res.header('Access-Control-Allow-Origin', allowedOrigin);
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE'); 
+    next();
 });
 
 // Middleware for rate limiting
