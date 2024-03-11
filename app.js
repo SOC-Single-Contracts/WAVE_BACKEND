@@ -58,6 +58,7 @@ const wallet = require('./controllers/wallet');
 const transfer = require('./controllers/transfer');
 const NFT = require('./controllers/nft');
 const ethereum = require('./controllers/ethereum')
+const solanaSwap = require('./controllers/solana-swap')
 // mongodb_controllers
 const mongodb = require('./controllers/user');
 
@@ -74,6 +75,7 @@ app.post('/tokendetails', nonNative.getTokenDetails);
 app.post('/imp_tokenerc_20', nonNative.impTokenErc20);
 app.post('/import-with-Key', wallet.importAccount);
 app.post('/import-with-mnemonic', wallet.importAccountFromMnemonic);
+app.post('/solana-swap', solanaSwap.solanaSwap);
 app.post('/get-solTrx-details', transfer.getTrxDetails);
 app.post('/getEstimatedGas_sol', transfer.getExtimatedGas);
 app.post('/getEstimatedGas_soltoken', transfer.getExtimatedGasToken);
