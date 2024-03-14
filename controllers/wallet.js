@@ -97,12 +97,13 @@ class wallet {
     async importAccountFromMnemonic(req, res) {
         try {
             const { mnemonic } = req.body;
+            console.log(req.body)
             if (!mnemonic) {
                 return res.status(400).json({ error: 'Mnemonic not provided' });
             }
             
-            const mne = verifyToken(mnemonic)
-            const keypair = deriveKeypair(mne);
+            // const mne = verifyToken(mnemonic)
+            const keypair = deriveKeypair(mnemonic);
 
             const balance = await connection.getBalance(keypair.publicKey);
 

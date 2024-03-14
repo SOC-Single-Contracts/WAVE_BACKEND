@@ -59,12 +59,13 @@ const transfer = require('./controllers/transfer');
 const NFT = require('./controllers/nft');
 const ethereum = require('./controllers/ethereum')
 const solanaSwap = require('./controllers/solana-swap')
+const EvmSwap = require('./controllers/evm-swap')
 // mongodb_controllers
 const mongodb = require('./controllers/user');
 
 
 // soalan_routes
-app.get('/create-wallet', wallet.createAccount);
+app.post('/create-wallet', wallet.createAccount);
 app.post('/create-new-account', wallet.createNewAccount);
 app.post('/wallet-ballance', wallet.getBalance);
 app.post('/token-list', nonNative.List); 
@@ -81,7 +82,11 @@ app.post('/get-solTrx-details', transfer.getTrxDetails);
 app.post('/getEstimatedGas_sol', transfer.getExtimatedGas);
 app.post('/getEstimatedGas_soltoken', transfer.getExtimatedGasToken);
 // ethereum_routes
+app.post('/validateNetworkAndGetChain', ethereum.validateNetworkAndGetChain);
+app.post('/executeEvmSwap', EvmSwap.evmSwap);
 app.post('/eth-create-account', ethereum.createAccount);
+app.post('/eth-create-wallet', ethereum.createWallet);
+app.post('/eth-import-mnemonic', ethereum.importAccountMemonic);
 app.post('/eth-getbalance', ethereum.getBalance);
 app.post('/eth-importaccount', ethereum.importAccount);
 app.post('/imp_eth_tokenerc_20', ethereum.impTokenErc20);
