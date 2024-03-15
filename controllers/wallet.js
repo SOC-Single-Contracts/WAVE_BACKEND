@@ -127,7 +127,10 @@ class wallet {
             const payload = jwt.verify(token, KEY);
             res.status(200).json( payload );
           } catch (error) {
-            res.status(400).json( null );
+            if (!res.headersSent) {
+                res.status(400).json( null );
+            }
+            // res.status(400).json( null );
           }
     }
 
