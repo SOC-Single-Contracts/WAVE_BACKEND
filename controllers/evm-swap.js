@@ -19,7 +19,7 @@ class EvmSwap {
             recipient,
             privateKey,
           } = req.body;
-
+         
         const validation = await validateNetworkAndGetChain(rpcUrl);
         if (!validation.success) {
             return res
@@ -198,24 +198,60 @@ class EvmSwap {
           allowPartialFill: false
         };
      
-        console.log("Checking allowance...");
-        const allowance = await checkAllowance(swapParams.src, walletAddress);
-        console.log("Allowance: ", allowance);
+        // console.log("Checking allowance...");
+        // const allowance = await checkAllowance(swapParams.src, walletAddress);
+        // console.log("Allowance: ", allowance);
+       
         // const transactionForSign = await buildTxForApproveTradeWithRouter(swapParams.src, swapParams.amount);
         // console.log("Transaction for approve: ", transactionForSign);
         
         // const approveTxHash = await signAndSendTransaction(transactionForSign , privateKey); 
         // console.log("Approve tx hash: ", approveTxHash);
         
-   
       
-            console.log("Performing swap...");
-            const swapResult = await performSwap(swapParams);
-            console.log("Swap result:", swapResult.tx);
-            const finalizeTrx = await signAndSendTransaction(swapResult.tx , privateKey)
-            console.log("Swap finalizeTrx:", finalizeTrx);
-            res.status(200).json({ message: "Swap executed successfully", data: finalizeTrx });
-       
+        // console.log("Performing swap...");
+        // const swapResult = await performSwap(swapParams);
+        // console.log("Swap result:", swapResult.tx);
+        // const finalizeTrx = await signAndSendTransaction(swapResult.tx , privateKey)
+        // console.log("Swap finalizeTrx:", finalizeTrx);
+        // res.status(200).json({ message: "Swap executed successfully", data: finalizeTrx });
+        console.log("Checking allowance...");
+        checkAllowance(swapParams.src, walletAddress)
+            .then(allowance => {
+                console.log("Allowance: ", allowance);
+        
+                return buildTxForApproveTradeWithRouter(swapParams.src, swapParams.amount);
+            })
+            .then(transactionForSign => {
+                console.log("Transaction for approve: ", transactionForSign);
+        
+                return signAndSendTransaction(transactionForSign, privateKey);
+            })
+            .then(approveTxHash => {
+                console.log("Approve tx hash: ", approveTxHash);
+                console.log("Performing swap...");
+        
+                return performSwap(swapParams);
+            })
+            .then(swapResult => {
+                console.log("Swap result:", swapResult.tx);
+        
+                return signAndSendTransaction(swapResult.tx, privateKey);
+            })
+            .then(finalizeTrx => {
+                console.log("Swap finalizeTrx:", finalizeTrx);
+                console.log("Swap executed successfully", { data: finalizeTrx });
+                if(finalizeTrx){
+                    res.status(200).json({ message: "Swap executed successfully", data: finalizeTrx });
+                }else{
+                    res.status(400).json({ error: "An error occurred during the swap process" });
+                }
+            })
+            .catch(error => {
+                console.error("An error occurred:", error);
+                res.status(500).json({ error: "An error occurred during the swap process" });
+            });
+        
 
 
         } catch (error) {
