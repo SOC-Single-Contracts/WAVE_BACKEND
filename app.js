@@ -50,7 +50,7 @@ app.use((req, res, next) => {
     }
     requestQueue.push(now);
     next();
-  });
+});
 
 // controllers
 const nonNative = require('./controllers/non-native');
@@ -60,9 +60,39 @@ const NFT = require('./controllers/nft');
 const ethereum = require('./controllers/ethereum')
 const solanaSwap = require('./controllers/solana-swap')
 const EvmSwap = require('./controllers/evm-swap')
+const BTC_Chain = require('./controllers/btc')
+const DOGE = require('./controllers/doge')
+const TRON = require('./controllers/tron')
+
+
 // mongodb_controllers
 const mongodb = require('./controllers/user');
 
+
+// TRON_routes
+app.post('/tron-create-wallet', TRON.createWallet);
+// app.post('/tron-create-new-account', TRON.createAccount);
+// app.post('/tron-importaccount', TRON.importAccount);
+// app.post('/tron-import-mnemonic', TRON.importAccountMemonic);
+// app.post('/tron-getbalance', TRON.getBalance);
+
+
+// DOGE_routes
+app.post('/doge-create-wallet', DOGE.createWallet);
+app.post('/doge-create-new-account', DOGE.createAccount);
+app.post('/doge-importaccount', DOGE.importAccount);
+app.post('/doge-import-mnemonic', DOGE.importAccountMemonic);
+app.post('/doge-getbalance', DOGE.getBalance);
+
+
+// BTC_routes
+app.post('/btc-create-wallet', BTC_Chain.createWallet);
+app.post('/btc-create-new-account', BTC_Chain.createAccount);
+app.post('/btc-importaccount', BTC_Chain.importAccount);
+app.post('/btc-import-mnemonic', BTC_Chain.importAccountMemonic);
+app.post('/btc-getbalance', BTC_Chain.getBalance);
+// app.post('/btc-send', BTC_Chain.sendNative);
+// app.post('/btc-import-tokens', BTC_Chain.importToken);
 
 // soalan_routes
 app.post('/create-wallet', wallet.createAccount);
