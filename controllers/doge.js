@@ -6,6 +6,8 @@ const bip39 = require('bip39');
 const ecc = require("tiny-secp256k1");
 const bip32 = BIP32Factory(ecc);
 const bitcoin = require('bitcoinjs-lib');
+const axios = require('axios')
+
 const dogecoinNetwork = {
   messagePrefix: '\x19Dogecoin Signed Message:\n',
   bech32: 'bc',
@@ -141,29 +143,28 @@ class DOGE {
   }
 
   async getBalance(req, res) {
-      const { address } = req.body;
+    const { address } = req.body;
 
-      if (typeof address !== "string") {
-        return res.status(400).json({ error: "Invalid wallet address" });
+    if (typeof address !== "string") {
+      return res.status(400).json({ error: "Invalid wallet address" });
+    }
+
+    try {
+      const url = `https://api.blockcypher.com/v1/doge/main/addrs/${address}/balance`;
+      const response = await axios.get(url);
+      const balance = response.data.balance;
+      const finalBalance = balance / 100000000;
+
+      res.json({ balance: finalBalance });
+    } catch (error) {
+      if (error instanceof TypeError) {
+        return res
+          .status(400)
+          .json({ error: "Invalid wallet address or chain" });
       }
-
-      try {
-        const url = `https://sochain.com/api/v2/get_address_balance/DOGE/${address}`;
-        const response = await axios.get(url);
-        
-        const balance = response.data.balance;
-        const finalBalance = balance / 100000000;
-
-        res.json({ balance: finalBalance });
-      } catch (error) {
-        if (error instanceof TypeError) {
-          return res
-            .status(400)
-            .json({ error: "Invalid wallet address or chain" });
-        }
-        res.status(500).json({ error: "Internal Server Error" });
-      }
-  }
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+}
 
     async sendNative(req, res) {
         try {
