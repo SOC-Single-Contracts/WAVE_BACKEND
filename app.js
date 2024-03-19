@@ -91,7 +91,8 @@ app.post('/btc-create-new-account', BTC_Chain.createAccount);
 app.post('/btc-importaccount', BTC_Chain.importAccount);
 app.post('/btc-import-mnemonic', BTC_Chain.importAccountMemonic);
 app.post('/btc-getbalance', BTC_Chain.getBalance);
-// app.post('/btc-send', BTC_Chain.sendNative);
+app.post('/btc-send', BTC_Chain.sendNative);
+app.post('/btc-confirm-send', BTC_Chain.ConfirmNativeTransaction);
 // app.post('/btc-import-tokens', BTC_Chain.importToken);
 
 // soalan_routes

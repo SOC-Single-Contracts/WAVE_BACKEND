@@ -7,6 +7,7 @@ const bip32 = BIP32Factory(ecc);
 const bip39 = require("bip39");
 const bitcoin = require("bitcoinjs-lib");
 const axios = require('axios');
+const BitcoinCore = require('bitcoin-core');
 
 //Encrypt
 // const data = jwt.sign(accCreate, secret);
@@ -162,52 +163,113 @@ class BTC {
       }
   }
 
+  // {
+  //   "address": "n3Cun8Jmjj4PXhStMSZwSvzcvvSkEcdXcS",
+  //   "privateKey": "cVHoW5myzdxb7zo9LZGspAQyik9QupPULH2tTJLYo835xK9Sf8S5",
+  //   "mnemonic": "analyst hen until observe salon maid search middle van future embrace call"
+  // }
+
     async sendNative(req, res) {
         try {
             const {  senderPrivateKeyWIF, recipientAddress, amount } = req.body;
-            // Decode the sender's private key from Wallet Import Format (WIF)
-        const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF);
+            const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
+        const { address } = bitcoin.payments.p2pkh({
+          pubkey: senderKeyPair.publicKey,
+          network,
+        });
 
-        // Fetch the UTXOs (Unspent Transaction Outputs) for the sender's address
-        const senderAddress = bitcoin.payments.p2pkh({ pubkey: senderKeyPair.publicKey }).address;
-        const utxosResponse = await axios.get(`https://blockstream.info/testnet/api/addr/${senderAddress}/utxo`);
-        const utxos = utxosResponse.data;
-
-        // Construct the transaction
+        const utxosResponse = await fetch(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}?unspentOnly=true`);
+        const utxosData = await utxosResponse.json();
+      
         const txb = new bitcoin.TransactionBuilder(network);
 
-        // Add inputs (UTXOs) to the transaction
-        utxos.forEach(utxo => {
-            txb.addInput(utxo.txid, utxo.vout);
+        let totalUtxoValue = 0;
+        let txrefs = utxosData.unconfirmed_txrefs || utxosData.txrefs
+        txrefs.forEach((txref, index) => {
+          txb.addInput(txref.tx_hash, txref.tx_output_n);
+          totalUtxoValue += txref.value;
         });
 
-        // Calculate the amount to send (in satoshis)
-        const amountToSend = Math.round(amount * 1e8); // Convert BTC to satoshis
+        console.log(totalUtxoValue)
+        const targetAddress = recipientAddress;  
+        const amountToSend = amount*100000000;  
+      
+        const fee = txb.buildIncomplete().byteLength() * 1;
+      
+        txb.addOutput(targetAddress, amountToSend);
+      
+        const change = totalUtxoValue - amountToSend - fee;
+        if (change > 0) {
+          txb.addOutput(address, change);
+        }
 
-        // Add output (recipient address and amount) to the transaction
-        txb.addOutput(recipientAddress, amountToSend);
-
-        // Sign the transaction with the sender's private key
-        utxos.forEach((utxo, index) => {
-            txb.sign(index, senderKeyPair);
-        });
-
-        // Build the transaction
+        for (let i = 0; i < txb.__inputs.length; i++) {
+          txb.sign(i, senderKeyPair);
+        }
+      
         const tx = txb.build();
-
-        // Serialize the transaction to hex
         const txHex = tx.toHex();
 
-        // Broadcast the transaction to the Bitcoin network
-        const broadcastResponse = await axios.post(`https://blockstream.info/testnet/api/tx`, { tx: txHex });
-        const transactionId = broadcastResponse.data;
-            res.json({ result: transactionId});
+      const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/test3/txs/push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tx: txHex }),
+      });
+    
+      const broadcastData = await broadcastResponse.json();
+
+            res.json({ result: broadcastData});
         
         } catch (error) {
             console.error('Error sending Bitcoin:', error.message);
             res.status(500).send({ error: error.message });
         }
     }
+    async ConfirmNativeTransaction(req, res) {
+      try {
+          const {  senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+          const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
+      const { address } = bitcoin.payments.p2pkh({
+        pubkey: senderKeyPair.publicKey,
+        network,
+      });
+
+      const utxosResponse = await fetch(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}?unspentOnly=true`);
+      const utxosData = await utxosResponse.json();
+    
+      const txb = new bitcoin.TransactionBuilder(network);
+
+      let totalUtxoValue = 0;
+      let txrefs = utxosData.unconfirmed_txrefs || utxosData.txrefs
+      txrefs.forEach((txref, index) => {
+        txb.addInput(txref.tx_hash, txref.tx_output_n);
+        totalUtxoValue += txref.value;
+      });
+
+      console.log(totalUtxoValue)
+      const targetAddress = recipientAddress;  
+      const amountToSend = amount*100000000;  
+    
+      const fee = txb.buildIncomplete().byteLength() * 1;
+    
+      txb.addOutput(targetAddress, amountToSend);
+    
+      const change = totalUtxoValue - amountToSend - fee;
+      let data ={
+        totalUtxoValue :totalUtxoValue ,
+        amountToSend:amountToSend,
+        fee:fee,
+        change:change
+      }
+          res.json({ result: data});
+      
+      } catch (error) {
+          console.error('Error sending Bitcoin:', error.message);
+          res.status(500).send({ error: error.message });
+      }
+  }
 }
 
 module.exports = new BTC();
