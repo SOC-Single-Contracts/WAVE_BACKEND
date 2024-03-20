@@ -93,7 +93,7 @@ app.post('/btc-import-mnemonic', BTC_Chain.importAccountMemonic);
 app.post('/btc-getbalance', BTC_Chain.getBalance);
 app.post('/btc-send', BTC_Chain.sendNative);
 app.post('/btc-confirm-send', BTC_Chain.ConfirmNativeTransaction);
-// app.post('/btc-import-tokens', BTC_Chain.importToken);
+app.post('/btc-transactions', BTC_Chain.getTransactions);
 
 // soalan_routes
 app.post('/create-wallet', wallet.createAccount);

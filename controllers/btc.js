@@ -16,7 +16,7 @@ const BitcoinCore = require('bitcoin-core');
 //Decrypt
 // const key = verifyToken(privateKey);
 
-const network = bitcoin.networks.bitcoin;
+const network = bitcoin.networks.testnet;
 
 const bitcoinClient = new BitcoinCore(network);
 
@@ -151,7 +151,9 @@ class BTC {
       }
 
       try {
-        const response = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
+        // https://blockstream.info/testnet/api/
+        // https://blockstream.info/api/
+        const response = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
         const utxos = response.data;
 
         // Calculate total balance from unspent transaction outputs (UTXOs) in Satoshis
@@ -187,105 +189,170 @@ class BTC {
 
     async sendNative(req, res) {
         try {
-            const {  senderPrivateKeyWIF, recipientAddress, amount } = req.body;
-            senderPrivateKeyWIF = await verifyToken(senderPrivateKeyWIF);
+            const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
             const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
-        const { address } = bitcoin.payments.p2pkh({
-          pubkey: senderKeyPair.publicKey,
-          network,
-        });
+            const { address } = bitcoin.payments.p2pkh({
+                pubkey: senderKeyPair.publicKey,
+                network,
+            });
 
-        const utxosResponse = await fetch(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}?unspentOnly=true`);
-        const utxosData = await utxosResponse.json();
-      
-        const txb = new bitcoin.TransactionBuilder(network);
+            // Fetch UTXOs using Blockstream's API
+            const utxosResponse = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
+            const utxosData = utxosResponse.data;
 
-        let totalUtxoValue = 0;
-        let txrefs = utxosData.unconfirmed_txrefs || utxosData.txrefs
-        txrefs.forEach((txref, index) => {
-          txb.addInput(txref.tx_hash, txref.tx_output_n);
-          totalUtxoValue += txref.value;
-        });
+            const txb = new bitcoin.TransactionBuilder(network);
 
-        console.log(totalUtxoValue)
-        const targetAddress = recipientAddress;  
-        const amountToSend = amount*100000000;  
-      
-        const fee = txb.buildIncomplete().byteLength() * 1;
-      
-        txb.addOutput(targetAddress, amountToSend);
-      
-        const change = totalUtxoValue - amountToSend - fee;
-        if (change > 0) {
-          txb.addOutput(address, change);
-        }
+            let totalUtxoValue = 0;
+            utxosData.forEach((utxo) => {
+                txb.addInput(utxo.txid, utxo.vout);
+                totalUtxoValue += utxo.value;
+            });
 
-        for (let i = 0; i < txb.__inputs.length; i++) {
-          txb.sign(i, senderKeyPair);
-        }
-      
-        const tx = txb.build();
-        const txHex = tx.toHex();
+            // console.log('Total UTXO Value:', totalUtxoValue);
+            const targetAddress = recipientAddress;
+            const amountToSend = amount * 100000000; // Convert BTC to Satoshi
 
-      const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/test3/txs/push', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tx: txHex }),
-      });
-    
-      const broadcastData = await broadcastResponse.json();
+            // Simplified fee calculation - this should be dynamically calculated
+            const fee = 10000;
 
-            res.json({ result: broadcastData});
+            txb.addOutput(targetAddress, amountToSend);
+
+            const change = totalUtxoValue - amountToSend - fee;
+            if (change > 0) {
+                txb.addOutput(address, change);
+            }
+
+            // Sign each input
+            for (let i = 0; i < txb.__inputs.length; i++) {
+                txb.sign(i, senderKeyPair);
+            }
+
+            const tx = txb.build();
+            const txHex = tx.toHex();
         
+
+            const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/test3/txs/push', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ tx: txHex }),
+            });
+            
+            const broadcastData = await broadcastResponse.json();
+            console.log(broadcastResponse)
+            if (broadcastData.result && broadcastData.result.error === "Limits reached.") {
+              console.error("Error: Limits reached. Please try again later.");
+          } else {
+            res.json({ result: txHex });
+          }
+            // if(broadcastData){
+            //   res.json({ result: broadcastData });
+            // }else{
+            //   res.json({ result: txHex });
+            // }
+
+            // try{
+            
+            //   const broadcastResponse = await fetch('https://api.blockchain.info/v3/pushtx', {
+            //     method: 'POST',
+            //     headers: {
+            //       'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify({ tx: txHex }),
+            //   });
+            
+            //   const broadcastData = await broadcastResponse.json();
+            //   res.json({ result: broadcastData });
+            
+            // }catch(error){
+            //    const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/test3/txs/push', {
+            //     method: 'POST',
+            //     headers: {
+            //       'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify({ tx: txHex }),
+            //   });
+              
+            //   const broadcastData = await broadcastResponse.json();
+            //   res.json({ result: broadcastData });
+            // }
+
+
         } catch (error) {
             console.error('Error sending Bitcoin:', error.message);
             res.status(500).send({ error: error.message });
         }
-    }
+    }   
     async ConfirmNativeTransaction(req, res) {
       try {
-          const {  senderPrivateKeyWIF, recipientAddress, amount } = req.body;
-          // senderPrivateKeyWIF = await verifyToken(senderPrivateKeyWIF);
-          const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
-      const { address } = bitcoin.payments.p2pkh({
-        pubkey: senderKeyPair.publicKey,
-        network,
-      });
-
-      const utxosResponse = await fetch(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}?unspentOnly=true`);
-      const utxosData = await utxosResponse.json();
+        const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
     
-      const txb = new bitcoin.TransactionBuilder(network);
-
-      let totalUtxoValue = 0;
-      let txrefs = utxosData.unconfirmed_txrefs || utxosData.txrefs
-      txrefs.forEach((txref, index) => {
-        txb.addInput(txref.tx_hash, txref.tx_output_n);
-        totalUtxoValue += txref.value;
-      });
-
-      console.log(totalUtxoValue)
-      const targetAddress = recipientAddress;  
-      const amountToSend = amount*100000000;  
+        // Convert the sender's private key from WIF and generate the sender's address
+        const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
+        const { address } = bitcoin.payments.p2pkh({
+          pubkey: senderKeyPair.publicKey,
+          network,
+        });
     
-      const fee = txb.buildIncomplete().byteLength() * 1;
+        // Fetch UTXOs using Blockstream's API
+        const utxosResponse = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
+        const utxosData = utxosResponse.data;
     
-      txb.addOutput(targetAddress, amountToSend);
+        const txb = new bitcoin.TransactionBuilder(network);
+        let totalUtxoValue = 0;
     
-      const change = totalUtxoValue - amountToSend - fee;
-      let data ={
-        totalUtxoValue :totalUtxoValue ,
-        amountToSend:amountToSend,
-        fee:fee,
-        change:change
-      }
-          res.json({ result: data});
-      
+        // Process each UTXO for the transaction
+        utxosData.forEach((utxo) => {
+          txb.addInput(utxo.txid, utxo.vout);
+          totalUtxoValue += utxo.value;
+        });
+    
+        // console.log('Total UTXO Value:', totalUtxoValue);
+        const targetAddress = recipientAddress;
+        const amountToSend = amount * 100000000; // Convert BTC to Satoshi
+    
+        // Estimate fee (placeholder logic; should be adjusted based on actual fee rates)
+        const fee = 10000; // Flat fee for example; adjust based on network conditions
+    
+        // Add the output for the recipient
+        txb.addOutput(targetAddress, amountToSend);
+    
+        // Calculate change and add an output for it
+        const change = totalUtxoValue - amountToSend - fee;
+        if (change > 0) {
+          txb.addOutput(address, change);
+        }
+    
+        let data = {
+          totalUtxoValue: totalUtxoValue / 100000000,
+          amountToSend: amountToSend / 100000000,
+          fee: fee / 100000000,
+          change: change / 100000000,
+        };
+    
+        // Note: The transaction is still not signed or broadcasted
+        res.json({ result: data });
+    
       } catch (error) {
-          console.error('Error sending Bitcoin:', error.message);
-          res.status(500).send({ error: error.message });
+        console.error('Error in ConfirmNativeTransaction:', error.message);
+        res.status(500).send({ error: error.message });
+      }
+    }
+    async getTransactions(req, res) {
+      const { address } = req.body;
+      try {
+        // Assuming you're working with Bitcoin's testnet; change the URL for mainnet if needed
+        const response = await axios.get(`https://blockstream.info/testnet/api/address/${address}/txs`);
+        const transactions = response.data;
+    
+        // Return only the 10 most recent transactions
+        const recentTransactions = transactions.slice(0, 10);
+    
+        res.json(recentTransactions);
+      } catch (error) {
+        console.error('Error fetching transactions:', error.message);
+        res.status(500).send({ error: 'Failed to fetch transactions' });
       }
     }
 }
