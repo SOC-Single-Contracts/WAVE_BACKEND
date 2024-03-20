@@ -1,6 +1,6 @@
 const { verifyToken } = require("../jwt_encryption");
 const secret = process.env.ENCRYPTION_KEY;
-
+const jwt = require('jsonwebtoken');
 const { BIP32Factory } = require("bip32");
 const ecc = require("tiny-secp256k1");
 const bip32 = BIP32Factory(ecc);
@@ -16,7 +16,10 @@ const BitcoinCore = require('bitcoin-core');
 //Decrypt
 // const key = verifyToken(privateKey);
 
-const network = bitcoin.networks.testnet;
+const network = bitcoin.networks.bitcoin;
+
+const bitcoinClient = new BitcoinCore(network);
+
 const path = `m/44'/0'/0'/0`;
 
 const accountA = {
@@ -40,10 +43,11 @@ class BTC {
         network: network,
       }).address;
 
-      let data = {
+      let accCreate = {
         address: btcAddress,
         privateKey: node.toWIF(),
       };
+      const data = jwt.sign(accCreate, secret);
       return res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to create new account." });
@@ -64,11 +68,12 @@ class BTC {
         network: network,
       }).address;
 
-      let data = {
+      let accCreate = {
         address: btcAddress,
         privateKey: node.toWIF(),
         mnemonic: mnemonic,
       };
+      const data = jwt.sign(accCreate, secret);
       return res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to create new account." });
@@ -80,17 +85,17 @@ class BTC {
     if (!privateKey || typeof privateKey !== "string") {
       return res.status(400).json({ error: "Invalid private key" });
     }
-    // const key = await verifyToken(privateKey);
+    const key = await verifyToken(privateKey);
 
     try {
-      const keyPair = bitcoin.ECPair.fromWIF(privateKey, network);
+      const keyPair = bitcoin.ECPair.fromWIF(key, network);
       const { address } = bitcoin.payments.p2pkh({
         pubkey: keyPair.publicKey,
         network,
       });
       const data = {
         address: address,
-        privateKey: privateKey,
+        privateKey: key,
       };
       res.json(data);
     } catch (error) {
@@ -105,7 +110,7 @@ class BTC {
 
   async importAccountMemonic(req, res) {
       const { mnemonic } = req.body;
-      
+      console.log(mnemonic)
       try {
         if (!bip39.validateMnemonic(mnemonic)) {
             throw new Error('Invalid mnemonic phrase.');
@@ -124,12 +129,12 @@ class BTC {
     
           const privateKey = keyPair.toWIF();
 
-          const data = {
+          const impCreate = {
                 address: btcAddress,
                 privateKey: privateKey
             };
 
-        //   const data = jwt.sign(impCreate, secret);
+          const data = jwt.sign(impCreate, secret);
           
         return res.json(data);
        
@@ -146,13 +151,24 @@ class BTC {
       }
 
       try {
-        const url = `https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance`;
-        const response = await axios.get(url);
-        
-        const balance = response.data.balance;
-        const finalBalance = balance / 100000000;
+        const response = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
+        const utxos = response.data;
 
-        res.json({ balance: finalBalance });
+        // Calculate total balance from unspent transaction outputs (UTXOs) in Satoshis
+        let balanceSatoshis = 0;
+        utxos.forEach(utxo => {
+            balanceSatoshis += utxo.value;
+        });
+
+        // Convert balance from Satoshis to BTC
+        const balanceBTC = balanceSatoshis / 100000000;
+        // const url = `https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance`;
+        // const response = await axios.get(url);
+        
+        // const balance = response.data.balance;
+        // const finalBalance = balance / 100000000;
+
+        res.json({ balance: balanceBTC });
       } catch (error) {
         if (error instanceof TypeError) {
           return res
@@ -172,6 +188,7 @@ class BTC {
     async sendNative(req, res) {
         try {
             const {  senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+            senderPrivateKeyWIF = await verifyToken(senderPrivateKeyWIF);
             const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
         const { address } = bitcoin.payments.p2pkh({
           pubkey: senderKeyPair.publicKey,
@@ -230,6 +247,7 @@ class BTC {
     async ConfirmNativeTransaction(req, res) {
       try {
           const {  senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+          // senderPrivateKeyWIF = await verifyToken(senderPrivateKeyWIF);
           const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
       const { address } = bitcoin.payments.p2pkh({
         pubkey: senderKeyPair.publicKey,
@@ -269,7 +287,7 @@ class BTC {
           console.error('Error sending Bitcoin:', error.message);
           res.status(500).send({ error: error.message });
       }
-  }
+    }
 }
 
 module.exports = new BTC();
