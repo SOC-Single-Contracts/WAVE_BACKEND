@@ -70,12 +70,14 @@ const mongodb = require('./controllers/user');
 
 
 // TRON_routes
+app.post('/tron-create-new-account', TRON.createAccount);
 app.post('/tron-create-wallet', TRON.createWallet);
-// app.post('/tron-create-new-account', TRON.createAccount);
-// app.post('/tron-importaccount', TRON.importAccount);
-// app.post('/tron-import-mnemonic', TRON.importAccountMemonic);
-// app.post('/tron-getbalance', TRON.getBalance);
-
+app.post('/tron-importaccount', TRON.importAccount);
+app.post('/tron-import-mnemonic', TRON.importAccountMemonic);
+app.post('/tron-getbalance', TRON.getBalance);
+app.post('/tron-transactions', TRON.getTransactions);
+app.post('/tron-send', TRON.sendTRX);
+// app.post('/tron-confirm-send', TRON.estimateTRXFee);
 
 // DOGE_routes
 app.post('/doge-create-wallet', DOGE.createWallet);
@@ -83,7 +85,8 @@ app.post('/doge-create-new-account', DOGE.createAccount);
 app.post('/doge-importaccount', DOGE.importAccount);
 app.post('/doge-import-mnemonic', DOGE.importAccountMemonic);
 app.post('/doge-getbalance', DOGE.getBalance);
-
+app.post('/doge-transactions', DOGE.getTransactions);
+app.post('/doge-send', DOGE.sendNative);
 
 // BTC_routes
 app.post('/btc-create-wallet', BTC_Chain.createWallet);

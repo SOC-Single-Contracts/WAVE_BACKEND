@@ -246,37 +246,7 @@ class BTC {
           } else {
             res.json({ result: txHex });
           }
-            // if(broadcastData){
-            //   res.json({ result: broadcastData });
-            // }else{
-            //   res.json({ result: txHex });
-            // }
-
-            // try{
             
-            //   const broadcastResponse = await fetch('https://api.blockchain.info/v3/pushtx', {
-            //     method: 'POST',
-            //     headers: {
-            //       'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify({ tx: txHex }),
-            //   });
-            
-            //   const broadcastData = await broadcastResponse.json();
-            //   res.json({ result: broadcastData });
-            
-            // }catch(error){
-            //    const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/test3/txs/push', {
-            //     method: 'POST',
-            //     headers: {
-            //       'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify({ tx: txHex }),
-            //   });
-              
-            //   const broadcastData = await broadcastResponse.json();
-            //   res.json({ result: broadcastData });
-            // }
 
 
         } catch (error) {

@@ -150,10 +150,10 @@ class DOGE {
     }
 
     try {
-      const url = `https://api.blockcypher.com/v1/doge/main/addrs/${address}/balance`;
+      const url = `https://dogechain.info/api/v1/address/balance/${address}`;
       const response = await axios.get(url);
       const balance = response.data.balance;
-      const finalBalance = balance / 100000000;
+      const finalBalance = balance ;
 
       res.json({ balance: finalBalance });
     } catch (error) {
@@ -166,53 +166,155 @@ class DOGE {
     }
 }
 
-    async sendNative(req, res) {
-        try {
-            const {  senderPrivateKeyWIF, recipientAddress, amount } = req.body;
-            // Decode the sender's private key from Wallet Import Format (WIF)
-        const senderKeyPair = dogecoin.ECPair.fromWIF(senderPrivateKeyWIF);
+async getTransactions(req, res) {
+const { address } = req.body;
+try {
+  // Assuming you're working with Bitcoin's testnet; change the URL for mainnet if needed
+  const response = await axios.get(`https://dogechain.info/api/v1/address/transactions/${address}/1`);
+  const transactions = response.data.transactions;
 
-        // Fetch the UTXOs (Unspent Transaction Outputs) for the sender's address
-        const senderAddress = dogecoin.payments.p2pkh({ pubkey: senderKeyPair.publicKey }).address;
-        const utxosResponse = await axios.get(`https://blockstream.info/testnet/api/addr/${senderAddress}/utxo`);
-        const utxos = utxosResponse.data;
+  res.json(transactions);
+} catch (error) {
+  console.error('Error fetching transactions:', error.message);
+  res.status(500).send({ error: 'Failed to fetch transactions' });
+}
+}
+// async sendNative(req, res) {
+//   try {
+//       const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+//       const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, network);
+//       const { address } = bitcoin.payments.p2pkh({
+//           pubkey: senderKeyPair.publicKey,
+//           network,
+//       });
 
-        // Construct the transaction
-        const txb = new dogecoin.TransactionBuilder(network);
+//       // Fetch UTXOs using Blockstream's API
+//       const utxosResponse = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
+//       const utxosData = utxosResponse.data;
 
-        // Add inputs (UTXOs) to the transaction
-        utxos.forEach(utxo => {
-            txb.addInput(utxo.txid, utxo.vout);
-        });
+//       const txb = new bitcoin.TransactionBuilder(network);
 
-        // Calculate the amount to send (in satoshis)
-        const amountToSend = Math.round(amount * 1e8); // Convert BTC to satoshis
+//       let totalUtxoValue = 0;
+//       utxosData.forEach((utxo) => {
+//           txb.addInput(utxo.txid, utxo.vout);
+//           totalUtxoValue += utxo.value;
+//       });
 
-        // Add output (recipient address and amount) to the transaction
-        txb.addOutput(recipientAddress, amountToSend);
+//       // console.log('Total UTXO Value:', totalUtxoValue);
+//       const targetAddress = recipientAddress;
+//       const amountToSend = amount * 100000000; // Convert BTC to Satoshi
 
-        // Sign the transaction with the sender's private key
-        utxos.forEach((utxo, index) => {
-            txb.sign(index, senderKeyPair);
-        });
+//       // Simplified fee calculation - this should be dynamically calculated
+//       const fee = 10000;
 
-        // Build the transaction
-        const tx = txb.build();
+//       txb.addOutput(targetAddress, amountToSend);
 
-        // Serialize the transaction to hex
-        const txHex = tx.toHex();
+//       const change = totalUtxoValue - amountToSend - fee;
+//       if (change > 0) {
+//           txb.addOutput(address, change);
+//       }
 
-        // Broadcast the transaction to the dogecoin network
-        const broadcastResponse = await axios.post(`https://blockstream.info/testnet/api/tx`, { tx: txHex });
-        const transactionId = broadcastResponse.data;
-            res.json({ result: transactionId});
-        
-        } catch (error) {
-            console.error('Error sending dogecoin:', error.message);
-            res.status(500).send({ error: error.message });
-        }
+//       // Sign each input
+//       for (let i = 0; i < txb.__inputs.length; i++) {
+//           txb.sign(i, senderKeyPair);
+//       }
+
+//       const tx = txb.build();
+//       const txHex = tx.toHex();
+  
+
+//       const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/test3/txs/push', {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ tx: txHex }),
+//       });
+      
+//       const broadcastData = await broadcastResponse.json();
+//       console.log(broadcastResponse)
+//       if (broadcastData.result && broadcastData.result.error === "Limits reached.") {
+//         console.error("Error: Limits reached. Please try again later.");
+//     } else {
+//       res.json({ result: txHex });
+//     }
+      
+
+
+//   } catch (error) {
+//       console.error('Error sending Bitcoin:', error.message);
+//       res.status(500).send({ error: error.message });
+//   }
+// }   
+async sendNative(req, res) {
+  try {
+    const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+
+    // This part would require adjustment to use Dogecoin parameters
+    const dogeNetwork = {
+      messagePrefix: '\x19Dogecoin Signed Message:\n',
+      bech32: 'bc',
+      bip32: {
+        public: 0x0488b21e,
+        private: 0x0488ade4,
+      },
+      pubKeyHash: 0x1e,
+      scriptHash: 0x16,
+      wif: 0x9e,
+    };
+
+    const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, dogeNetwork);
+    const { address } = bitcoin.payments.p2pkh({
+        pubkey: senderKeyPair.publicKey,
+        network: dogeNetwork,
+    });
+
+    // Fetch UTXOs using a Dogecoin-compatible API
+    const utxosResponse = await axios.get(`https://doge-api.com/api/address/${address}/utxo`);
+    const utxosData = utxosResponse.data;
+
+    const txb = new bitcoin.TransactionBuilder(dogeNetwork);
+
+    let totalUtxoValue = 0;
+    utxosData.forEach((utxo) => {
+        txb.addInput(utxo.txid, utxo.vout);
+        totalUtxoValue += utxo.value;
+    });
+
+    const targetAddress = recipientAddress;
+    const amountToSend = amount * 100000000; // Dogecoin also uses satoshi as its smallest unit
+
+    // Simplified fee calculation - adjust based on current Dogecoin network conditions
+    const fee = 10000; // Placeholder value
+
+    txb.addOutput(targetAddress, amountToSend);
+    const change = totalUtxoValue - amountToSend - fee;
+    if (change > 0) {
+        txb.addOutput(address, change);
     }
 
+    // Sign each input
+    for (let i = 0; i < txb.__inputs.length; i++) {
+        txb.sign(i, senderKeyPair);
+    }
+
+    const tx = txb.build();
+    const txHex = tx.toHex();
+
+    // Broadcast transaction using a Dogecoin-compatible API
+    const broadcastResponse = await axios.post('https://doge-api.com/api/tx/push', {
+      tx: txHex,
+    });
+    
+    // Assume broadcastData structure based on the Dogecoin API you are using
+    const broadcastData = await broadcastResponse.data;
+    
+    res.json({ result: txHex });
+  } catch (error) {
+      console.error('Error sending Dogecoin:', error.message);
+      res.status(500).send({ error: error.message });
+  }
+}
 }
 
 module.exports = new DOGE();
