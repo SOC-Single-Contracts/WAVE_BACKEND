@@ -1,6 +1,6 @@
 const { verifyToken } = require("../jwt_encryption");
 const secret = process.env.ENCRYPTION_KEY;
-
+const jwt = require('jsonwebtoken');
 const hdkey = require('hdkey')
 const bip39 = require('bip39')
 const bip32 = require('bip32')
@@ -24,7 +24,7 @@ const TronWeb = require('tronweb')
 let testnet = 'https://api.shasta.trongrid.io'
 let mainnet = 'https://api.trongrid.io'
 
-const NETWORK = testnet
+const NETWORK = mainnet
 class TRON {
 
   async createAccount(req, res) {
@@ -33,10 +33,11 @@ class TRON {
         fullHost: NETWORK, 
         privateKey: TronWeb.utils.accounts.generateAccount().privateKey,
       });
-      let data = {
+      let accCreate = {
         address: tronWeb.defaultAddress.base58,
         privateKey: tronWeb.defaultPrivateKey,
       };
+      const data = jwt.sign(accCreate, secret);
       return res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to create new account." });
@@ -57,12 +58,12 @@ class TRON {
         privateKey: privateKey,
       });
   
-      let data = {
+      let accCreate = {
         address: tronWeb.address.fromPrivateKey(privateKey),
         privateKey: privateKey,
         mnemonic: mnemonic,
       };
-  
+    const data = jwt.sign(accCreate, secret);
       return res.json(data);
     } catch (error) {
       console.error('Failed to create wallet:', error);
@@ -115,14 +116,13 @@ class TRON {
             privateKey: privateKey,
         });
 
-        const data = {
+        const accCreate = {
             address: tronWeb.address.fromPrivateKey(privateKey),
             privateKey: privateKey
         };
 
-        //   const data = jwt.sign(impCreate, secret);
-          
-        return res.json(data);
+        const data = jwt.sign(accCreate, secret);
+        return res.json(data)
        
       } catch (error) {
           res.status(500).send({ error: error });

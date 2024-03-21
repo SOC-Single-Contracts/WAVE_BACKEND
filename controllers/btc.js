@@ -16,7 +16,7 @@ const BitcoinCore = require('bitcoin-core');
 //Decrypt
 // const key = verifyToken(privateKey);
 
-const network = bitcoin.networks.testnet;
+const network = bitcoin.networks.bitcoin;
 
 const bitcoinClient = new BitcoinCore(network);
 
@@ -153,7 +153,7 @@ class BTC {
       try {
         // https://blockstream.info/testnet/api/
         // https://blockstream.info/api/
-        const response = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
+        const response = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
         const utxos = response.data;
 
         // Calculate total balance from unspent transaction outputs (UTXOs) in Satoshis
@@ -196,8 +196,10 @@ class BTC {
                 network,
             });
 
-            // Fetch UTXOs using Blockstream's API
-            const utxosResponse = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
+              // Fetch UTXOs using Blockstream's API
+              // https://blockstream.info/testnet/api/
+              // https://blockstream.info/api/
+            const utxosResponse = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
             const utxosData = utxosResponse.data;
 
             const txb = new bitcoin.TransactionBuilder(network);
@@ -229,9 +231,9 @@ class BTC {
 
             const tx = txb.build();
             const txHex = tx.toHex();
-        
-
-            const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/test3/txs/push', {
+            //https://api.blockcypher.com/v1/btc/test3/txs/
+            // https://api.blockcypher.com/v1/btc/main/
+            const broadcastResponse = await fetch('https://api.blockcypher.com/v1/btc/main/txs/push', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -240,12 +242,14 @@ class BTC {
             });
             
             const broadcastData = await broadcastResponse.json();
-            console.log(broadcastResponse)
-            if (broadcastData.result && broadcastData.result.error === "Limits reached.") {
-              console.error("Error: Limits reached. Please try again later.");
-          } else {
-            res.json({ result: txHex });
-          }
+            res.json({ result: broadcastData });
+          //   console.log(broadcastResponse)
+          //   if (broadcastData.result && broadcastData.result.error === "Limits reached.") {
+          //     console.error("Error: Limits reached. Please try again later.");
+          //     res.json({ result: txHex });
+          //   } else {
+          //   res.json({ result: broadcastResponse });
+          // }
             
 
 
@@ -266,7 +270,7 @@ class BTC {
         });
     
         // Fetch UTXOs using Blockstream's API
-        const utxosResponse = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
+        const utxosResponse = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
         const utxosData = utxosResponse.data;
     
         const txb = new bitcoin.TransactionBuilder(network);
@@ -313,7 +317,7 @@ class BTC {
       const { address } = req.body;
       try {
         // Assuming you're working with Bitcoin's testnet; change the URL for mainnet if needed
-        const response = await axios.get(`https://blockstream.info/testnet/api/address/${address}/txs`);
+        const response = await axios.get(`https://blockstream.info/api/address/${address}/txs`);
         const transactions = response.data;
     
         // Return only the 10 most recent transactions

@@ -1,6 +1,6 @@
 const { verifyToken } = require("../jwt_encryption");
 const secret = process.env.ENCRYPTION_KEY;
-
+const jwt = require('jsonwebtoken');
 const { BIP32Factory } = require("bip32");
 const bip39 = require('bip39');
 const ecc = require("tiny-secp256k1");
@@ -35,11 +35,12 @@ class DOGE {
     // Generate a Dogecoin address
     const { address } = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey, network });
 
-      let data = {
+      let accCreate = {
         address: address,
         publicKey:publicKey,
         privateKey: privateKey,
       };
+      const data = jwt.sign(accCreate, secret);
       return res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to create new account." });
@@ -61,11 +62,12 @@ class DOGE {
       let { address } = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey, network: bitcoin.networks.dogecoin });
   
       
-      let data = {
+      let accCreate = {
         address: address,
         privateKey: node.toWIF(),
         mnemonic: mnemonic,
       };
+      const data = jwt.sign(accCreate, secret);
       return res.json(data);
     } catch (error) {
       res.status(500).json({ error: "Failed to create new account." });
@@ -128,14 +130,14 @@ class DOGE {
           const { address } = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey, network: bitcoin.networks.dogecoin });
 
 
-          const data = {
+          const accCreate = {
                 address: address,
                 privateKey: node.toWIF()
             };
 
-        //   const data = jwt.sign(impCreate, secret);
-          
-        return res.json(data);
+        
+            const data = jwt.sign(accCreate, secret);
+            return res.json(data)
        
       } catch (error) {
           res.status(500).send({ error: error });
@@ -250,7 +252,6 @@ async sendNative(req, res) {
   try {
     const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
 
-    // This part would require adjustment to use Dogecoin parameters
     const dogeNetwork = {
       messagePrefix: '\x19Dogecoin Signed Message:\n',
       bech32: 'bc',
@@ -269,23 +270,23 @@ async sendNative(req, res) {
         network: dogeNetwork,
     });
 
-    // Fetch UTXOs using a Dogecoin-compatible API
-    const utxosResponse = await axios.get(`https://doge-api.com/api/address/${address}/utxo`);
-    const utxosData = utxosResponse.data;
+    // Fetch UTXOs using SoChain API
+    const network = 'DOGE'; // Specify the network, DOGE for Dogecoin
+    const utxosResponse = await axios.get(`https://sochain.com/api/v2/get_tx_unspent/${network}/${address}`);
+    const utxosData = utxosResponse.data.data.txs;
 
     const txb = new bitcoin.TransactionBuilder(dogeNetwork);
 
     let totalUtxoValue = 0;
     utxosData.forEach((utxo) => {
-        txb.addInput(utxo.txid, utxo.vout);
-        totalUtxoValue += utxo.value;
+        txb.addInput(utxo.txid, utxo.output_no);
+        totalUtxoValue += Math.floor(utxo.value * 100000000); // Convert DOGE to satoshi
     });
 
     const targetAddress = recipientAddress;
-    const amountToSend = amount * 100000000; // Dogecoin also uses satoshi as its smallest unit
+    const amountToSend = amount * 100000000; // Convert amount to satoshi
 
-    // Simplified fee calculation - adjust based on current Dogecoin network conditions
-    const fee = 10000; // Placeholder value
+    const fee = 10000; // Placeholder for fee
 
     txb.addOutput(targetAddress, amountToSend);
     const change = totalUtxoValue - amountToSend - fee;
@@ -294,25 +295,24 @@ async sendNative(req, res) {
     }
 
     // Sign each input
-    for (let i = 0; i < txb.__inputs.length; i++) {
+    for (let i = 0; i < utxosData.length; i++) {
         txb.sign(i, senderKeyPair);
     }
 
     const tx = txb.build();
     const txHex = tx.toHex();
 
-    // Broadcast transaction using a Dogecoin-compatible API
-    const broadcastResponse = await axios.post('https://doge-api.com/api/tx/push', {
-      tx: txHex,
+    // Broadcast transaction using SoChain's API
+    const broadcastResponse = await axios.post(`https://sochain.com/api/v2/send_tx/${network}`, {
+      tx_hex: txHex,
     });
-    
-    // Assume broadcastData structure based on the Dogecoin API you are using
-    const broadcastData = await broadcastResponse.data;
-    
-    res.json({ result: txHex });
+
+    const broadcastData = broadcastResponse.data;
+
+    res.json({ result: txHex, broadcastData });
   } catch (error) {
-      console.error('Error sending Dogecoin:', error.message);
-      res.status(500).send({ error: error.message });
+    console.error('Error sending Dogecoin:', error.message);
+    res.status(500).send({ error: error.message });
   }
 }
 }
