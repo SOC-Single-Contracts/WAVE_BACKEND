@@ -1,5 +1,7 @@
 const { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL } = require("@solana/web3.js");
 const { verifyToken } = require("../jwt_encryption");
+const { SystemProgram, Transaction, StakeProgram } = require('@solana/web3.js');
+const StakeProgram = require('@solana/web3.js').StakeProgram;
 const connection = new Connection(process.env.SOL_NETWORK);
 const bip39 = require('bip39');
 const bs58 = require('bs58');
@@ -89,6 +91,62 @@ class wallet {
                 privateKey: verifyToken(privateKey),
                 balance: balance / LAMPORTS_PER_SOL
             });
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
+
+    async stakeSol(req, res) {
+        try {
+            const { privateKey  , amount } = req.body;
+         
+            if (!privateKey) {
+                return res.status(400).json({ error: 'Private key not provided' });
+            }
+
+            const privateKeyUint8Array = bs58.decode(privateKey);
+            const keypair = Keypair.fromSecretKey(privateKeyUint8Array);
+            const stakeAccount = new Keypair();
+            const validatorVoteAccount = new PublicKey('3BEVzxnYu7AJAjfqhTDw7frNUdRxZGVNthw1cyJLHp8N');
+            
+                // Construct the stake account creation transaction
+                const createStakeAccountInstruction = StakeProgram.createAccountWithSeed({
+                    fromPubkey: keypair.publicKey,
+                    stakePubkey: stakeAccount.publicKey,
+                    basePubkey: keypair.publicKey,
+                    seed: 'stake', // Seed for the stake account address
+                    lamports: await connection.getMinimumBalanceForRentExemption(StakeProgram.space), // Minimum balance
+                    space: StakeProgram.space, // Space required
+                    programId: StakeProgram.programId, // Program ID
+                    authorized: {
+                        staker: keypair.publicKey,
+                        withdrawer: keypair.publicKey
+                    }
+                });
+                console.log("createStakeAccountInstruction",createStakeAccountInstruction) /// code is running on this line only
+       
+                const stakeInstruction = StakeProgram.stakeWithConfig({
+                    stakePubkey: stakeAccount.publicKey,
+                    authorizedPubkey: keypair.publicKey,
+                    votePubkey: validatorVoteAccount,
+                    lamports: amount,
+                    // Additional stake configuration options if needed
+                });
+        
+            
+                const transaction = new Transaction().add(createStakeAccountInstruction, stakeInstruction);
+
+                // Sign the transaction
+                transaction.feePayer = keypair.publicKey;
+                transaction.recentBlockhash = await connection.getRecentBlockhash();
+                transaction.partialSign(keypair);
+      
+            
+            // Send the transaction
+            const signature = await connection.sendTransaction(transaction);
+            console.log('Staked SOL. Transaction signature:', signature);
+
+            res.json({signature});
         } catch (error) {
             res.status(500).json({ error: 'Internal Server Error' });
         }

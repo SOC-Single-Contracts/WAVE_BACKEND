@@ -98,6 +98,7 @@ class transfer {
         }
     }
     async getExtimatedGas(req, res){
+      try {
       const {key, from, amount } = req.body;
       const privateKey = verifyToken(key)
       const privateKeyUint8Array = bs58.decode(privateKey);
@@ -124,7 +125,6 @@ class transfer {
               'confirmed',
             );
             const feeInLamports = response.value / 1000000000;
-      try {
         let data = {
           gas_price: "84711489836",
           gas_fee: feeInLamports.toString(),
@@ -137,6 +137,7 @@ class transfer {
       }
     }
     async getExtimatedGasToken(req, res){
+      try {
       const {key, from, amount , tokenAddress} = req.body;
       const privateKey = verifyToken(key)
       const privateKeyUint8Array = bs58.decode(privateKey);
@@ -163,7 +164,6 @@ class transfer {
               'confirmed',
             );
             const feeInLamports = response.value / 1000000000;
-      try {
         let data = {
           gas_price: "84711489836",
           gas_fee: feeInLamports.toString(),

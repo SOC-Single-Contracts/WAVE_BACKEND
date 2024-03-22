@@ -249,6 +249,7 @@ try {
 //   }
 // }   
 async sendNative(req, res) {
+  
   try {
     const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
 
@@ -315,6 +316,53 @@ async sendNative(req, res) {
     res.status(500).send({ error: error.message });
   }
 }
+async confirmTransaction(req, res){
+
+  const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+try{
+  
+const senderPrivateKey = senderPrivateKeyWIF;
+const amountToSend = amount / 100000000; 
+
+// Network (assuming Dogecoin in this case)
+const network = bitcoin.networks.dogecoin;
+
+// Create a new transaction builder
+const txb = new bitcoin.TransactionBuilder(network);
+
+// Add the input (sender's address)
+const senderKeyPair = bitcoin.ECPair.fromPrivateKey(Buffer.from(senderPrivateKey, 'hex'));
+const senderAddress = bitcoin.payments.p2pkh({ pubkey: senderKeyPair.publicKey, network }).address;
+const unspentTx = {
+    txId: 'ced3aefafb3e5f3a874d3719f9ff1fa6849dc80d40eebe2fb3cb8e3e52d6c2d9',
+    vout: 0, // Assuming the first output of the previous transaction is being spent
+    value: 100000000, // Value in satoshis (1 Dogecoin)
+    scriptPubKey: senderAddress.output
+};
+
+txb.addInput(unspentTx.txId, unspentTx.vout);
+// Add the output (recipient's address)
+txb.addOutput(recipientAddress, amountToSend);
+
+// Sign the transaction
+txb.sign(0, senderKeyPair);
+// Get the transaction size
+const transaction = txb.build();
+console.log(transaction)
+const transactionSizeInBytes = transaction.virtualSize();
+
+// Estimate fee per byte (you may get this from an API or use a predefined value)
+const feePerByte = 10; // Example fee per byte in satoshis
+
+// Calculate the fee
+const fee = transactionSizeInBytes * feePerByte;
+return res.json(fee)
+}catch(error){
+  res.status(500).send({ error: error.message });
+}
+
+}
+
 }
 
 module.exports = new DOGE();

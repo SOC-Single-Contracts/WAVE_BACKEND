@@ -67,7 +67,15 @@ const TRON = require('./controllers/tron')
 
 // mongodb_controllers
 const mongodb = require('./controllers/user');
+const Staking = require('./controllers/stacking')
 
+//Staking
+app.post('/stake_amount', Staking.stacked);
+app.post('/get_staking', Staking.get_stacked_byWallet);
+app.post('/claim', Staking.claimAmount);
+app.post('/get_config_staking', Staking.get_stacked_config);
+//Admin
+app.post('/config_staking', Staking.AdminStacked);
 
 // TRON_routes
 app.post('/tron-create-new-account', TRON.createAccount);
@@ -87,6 +95,7 @@ app.post('/doge-import-mnemonic', DOGE.importAccountMemonic);
 app.post('/doge-getbalance', DOGE.getBalance);
 app.post('/doge-transactions', DOGE.getTransactions);
 app.post('/doge-send', DOGE.sendNative);
+app.post('/doge-confirm-send', DOGE.confirmTransaction);
 
 // BTC_routes
 app.post('/btc-create-wallet', BTC_Chain.createWallet);
@@ -99,6 +108,7 @@ app.post('/btc-confirm-send', BTC_Chain.ConfirmNativeTransaction);
 app.post('/btc-transactions', BTC_Chain.getTransactions);
 
 // soalan_routes
+app.post('/stake-sol', wallet.stakeSol);
 app.post('/create-wallet', wallet.createAccount);
 app.post('/create-new-account', wallet.createNewAccount);
 app.post('/wallet-ballance', wallet.getBalance);
@@ -131,6 +141,7 @@ app.post('/eth-send-720', ethereum.sendNonNative);
 app.post('/eth-send-721', ethereum.sendNonNative721);
 app.post('/getEstimatedGas_evm', ethereum.getEstimatedGas);
 app.post('/getEstimatedGasERC20_evm', ethereum.getEstimatedGasToken);
+app.post('/getEVMTrx', ethereum.getEVMtransaction);
 // mongodb_routes
 app.post('/decrypt', wallet.decrypt);
 app.post('/encrypt', wallet.encrypt);
@@ -142,7 +153,6 @@ app.put('/deattach-account', mongodb.removeAccount);
 app.post('/insertTrx', mongodb.insertTrx);
 app.post('/getTrx', mongodb.getTrx);
 app.post('/getSolTrx', nonNative.getSolTrx);
-app.post('/getEVMTrx', ethereum.getEVMtransaction);
 app.post('/getnfts', NFT.getNft);
 app.post('/sendnft', nonNative.sendNFT);
 app.post('/sendotp', mongodb.sendOtp);
