@@ -19,6 +19,18 @@ const dogecoinNetwork = {
   scriptHash: 0x16,
   wif: 0x9e,
 };
+const dogecoinTestnetNetwork = {
+  messagePrefix: '\x19Dogecoin Signed Message:\n',
+  bech32: 'tb',
+  bip32: {
+      public: 0x043587CF,
+      private: 0x04358394,
+  },
+  pubKeyHash: 0x71,
+  scriptHash: 0xc4,
+  wif: 0xf1,
+};
+
 bitcoin.networks.dogecoin = dogecoinNetwork;
 const network = bitcoin.networks.dogecoin;
 
@@ -248,74 +260,228 @@ try {
 //       res.status(500).send({ error: error.message });
 //   }
 // }   
+
+
+
 async sendNative(req, res) {
-  
   try {
-    const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+      const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+      console.log(req.body);
 
-    const dogeNetwork = {
-      messagePrefix: '\x19Dogecoin Signed Message:\n',
-      bech32: 'bc',
-      bip32: {
-        public: 0x0488b21e,
-        private: 0x0488ade4,
-      },
-      pubKeyHash: 0x1e,
-      scriptHash: 0x16,
-      wif: 0x9e,
-    };
+      // Dogecoin network configuration
+      const dogeNetwork = {
+          messagePrefix: '\x19Dogecoin Signed Message:\n',
+          bech32: 'bc',
+          bip32: {
+              public: 0x0488b21e,
+              private: 0x0488ade4,
+          },
+          pubKeyHash: 0x1e,
+          scriptHash: 0x16,
+          wif: 0x9e,
+      };
 
-    const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, dogeNetwork);
-    const { address } = bitcoin.payments.p2pkh({
-        pubkey: senderKeyPair.publicKey,
-        network: dogeNetwork,
-    });
+      // Derive sender's address from private key
+      const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, dogeNetwork);
+      const { address } = bitcoin.payments.p2pkh({
+          pubkey: senderKeyPair.publicKey,
+          network: dogeNetwork,
+      });
 
-    // Fetch UTXOs using SoChain API
-    const network = 'DOGE'; // Specify the network, DOGE for Dogecoin
-    const utxosResponse = await axios.get(`https://sochain.com/api/v2/get_tx_unspent/${network}/${address}`);
-    const utxosData = utxosResponse.data.data.txs;
+      let senderAddress = address;
+      let apiKey = 't-64f72e1c0c34f3d88deb529d-c1cd04c6b6fc41cbbc992e46'
 
-    const txb = new bitcoin.TransactionBuilder(dogeNetwork);
+      // Construct request body for transaction creation
+      const requestBody = {
+          fromAddress: [
+              {
+                  address: senderAddress,
+                  privateKey: senderPrivateKeyWIF
+              }
+          ],
+          to: [
+              {
+                  address: recipientAddress,
+                  value: amount // Amount to send
+              }
+          ],
+          fee: "1", // Fee amount
+          changeAddress: senderAddress // Change address
+      };
 
-    let totalUtxoValue = 0;
-    utxosData.forEach((utxo) => {
-        txb.addInput(utxo.txid, utxo.output_no);
-        totalUtxoValue += Math.floor(utxo.value * 100000000); // Convert DOGE to satoshi
-    });
+      // Send transaction request to Tatum API
+      const transactionResponse = await fetch('https://api.tatum.io/v3/dogecoin/transaction', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey
+          },
+          body: JSON.stringify(requestBody)
+      });
 
-    const targetAddress = recipientAddress;
-    const amountToSend = amount * 100000000; // Convert amount to satoshi
+      const transactionData = await transactionResponse.json();
+      res.status(200).json(transactionData);
+      // console.log(transactionData)
+      // if (transactionData.txId) {
+      //     // Construct request body for transaction broadcast
+      //     const broadcastRequestBody = {
+      //         txData: transactionData.txId
+      //     };
 
-    const fee = 10000; // Placeholder for fee
+      //     // Broadcast transaction to Dogecoin network
+      //     const broadcastResponse = await fetch('https://api.tatum.io/v3/dogecoin/broadcast', {
+      //         method: 'POST',
+      //         headers: {
+      //             'Content-Type': 'application/json',
+      //             'x-api-key': apiKey
+      //         },
+      //         body: JSON.stringify(broadcastRequestBody)
+      //     });
 
-    txb.addOutput(targetAddress, amountToSend);
-    const change = totalUtxoValue - amountToSend - fee;
-    if (change > 0) {
-        txb.addOutput(address, change);
-    }
-
-    // Sign each input
-    for (let i = 0; i < utxosData.length; i++) {
-        txb.sign(i, senderKeyPair);
-    }
-
-    const tx = txb.build();
-    const txHex = tx.toHex();
-
-    // Broadcast transaction using SoChain's API
-    const broadcastResponse = await axios.post(`https://sochain.com/api/v2/send_tx/${network}`, {
-      tx_hex: txHex,
-    });
-
-    const broadcastData = broadcastResponse.data;
-
-    res.json({ result: txHex, broadcastData });
+      //     const broadcastData = await broadcastResponse.json();
+      //     res.json(broadcastData);
+      // } else {
+      //     res.status(200).json(transactionData);
+      // }
   } catch (error) {
-    console.error('Error sending Dogecoin:', error.message);
-    res.status(500).send({ error: error.message });
+      console.error('Error sending Dogecoin:', error.message);
+      res.status(500).send({ error: error.message });
   }
 }
+
+
+
+// async sendNative(req, res) {
+  
+//   try {
+//     const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;
+//     console.log(req.body)
+//     const dogeNetwork = {
+//       messagePrefix: '\x19Dogecoin Signed Message:\n',
+//       bech32: 'bc',
+//       bip32: {
+//         public: 0x0488b21e,
+//         private: 0x0488ade4,
+//       },
+//       pubKeyHash: 0x1e,
+//       scriptHash: 0x16,
+//       wif: 0x9e,
+//     };
+
+//     const senderKeyPair = bitcoin.ECPair.fromWIF(senderPrivateKeyWIF, dogeNetwork);
+//     const { address } = bitcoin.payments.p2pkh({
+//         pubkey: senderKeyPair.publicKey,
+//         network: dogeNetwork,
+//     });
+
+//     let senderAddress = address
+//     let apiKey = 't-64f72e1c0c34f3d88deb529d-c1cd04c6b6fc41cbbc992e46'
+//     let senderPrivateKey = senderPrivateKeyWIF
+
+//     try {
+//       const requestBody = {
+//         fromAddress: [
+//             {
+//                 address: senderAddress,
+//                 privateKey: senderPrivateKeyWIF
+//             }
+//         ],
+//         to: [
+//             {
+//                 address: recipientAddress,
+//                 value: amount // Amount to send
+//             }
+//         ],
+//         fee : "1",
+//         changeAddress : recipientAddress
+//     };
+
+//     const resp = await fetch('https://api.tatum.io/v3/dogecoin/transaction', {
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',
+//             'x-api-key': apiKey // Your Tatum API key
+//         },
+//         body: JSON.stringify(requestBody)
+//     });
+//     const data = await resp.json();
+//     if(data.txId){
+//       try {
+//         const body = {
+//             txData: data.txId 
+//         };
+  
+//         const responce = await fetch('https://api.tatum.io/v3/dogecoin/broadcast', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'x-api-key': apiKey 
+//             },
+//             body: JSON.stringify(body)
+//         });
+//         console.log(responce)
+//         const data = await responce.json();
+//         res.json( data );
+//         return data;
+//     } catch (error) {
+//       res.status(500).send({ error: error.response ? error.response.data : error.message});
+//     }
+//     }else{
+//       res.json( data );
+//       return ;
+//     }
+//     // res.status(400).send({ resp});
+//       //
+//       // 
+//   } catch (error) {
+
+//       res.status(500).send({ error: error.response ? error.response.data : error.message});
+//   }
+//     // // Fetch UTXOs using SoChain API
+//     // const network = 'DOGE'; // Specify the network, DOGE for Dogecoin
+//     // const utxosResponse = await axios.get(`https://sochain.com/api/v2/get_tx_unspent/${network}/${address}`);
+//     // const utxosData = utxosResponse.data.data.txs;
+
+//     // const txb = new bitcoin.TransactionBuilder(dogeNetwork);
+
+//     // let totalUtxoValue = 0;
+//     // utxosData.forEach((utxo) => {
+//     //     txb.addInput(utxo.txid, utxo.output_no);
+//     //     totalUtxoValue += Math.floor(utxo.value * 100000000); // Convert DOGE to satoshi
+//     // });
+
+//     // const targetAddress = recipientAddress;
+//     // const amountToSend = amount * 100000000; // Convert amount to satoshi
+
+//     // const fee = 10000; // Placeholder for fee
+
+//     // txb.addOutput(targetAddress, amountToSend);
+//     // const change = totalUtxoValue - amountToSend - fee;
+//     // if (change > 0) {
+//     //     txb.addOutput(address, change);
+//     // }
+
+//     // // Sign each input
+//     // for (let i = 0; i < utxosData.length; i++) {
+//     //     txb.sign(i, senderKeyPair);
+//     // }
+
+//     // const tx = txb.build();
+//     // const txHex = tx.toHex();
+
+//     // // Broadcast transaction using SoChain's API
+//     // const broadcastResponse = await axios.post(`https://sochain.com/api/v2/send_tx/${network}`, {
+//     //   tx_hex: txHex,
+//     // });
+
+//     // const broadcastData = broadcastResponse.data;
+
+
+//   } catch (error) {
+//     console.error('Error sending Dogecoin:', error.message);
+//     res.status(500).send({ error: error.message });
+//   }
+// }
 async confirmTransaction(req, res){
 
   const { senderPrivateKeyWIF, recipientAddress, amount } = req.body;

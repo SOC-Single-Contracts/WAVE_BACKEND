@@ -1,6 +1,6 @@
 const { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL } = require("@solana/web3.js");
 const { verifyToken } = require("../jwt_encryption");
-const { SystemProgram, Transaction, StakeProgram } = require('@solana/web3.js');
+const { SystemProgram, Transaction } = require('@solana/web3.js');
 const StakeProgram = require('@solana/web3.js').StakeProgram;
 const connection = new Connection(process.env.SOL_NETWORK);
 const bip39 = require('bip39');
