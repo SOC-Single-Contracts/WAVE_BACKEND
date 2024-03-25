@@ -33,7 +33,7 @@ class wallet {
       return res.status(400).json({ error: "Unsupported chain" });
     }
 
-    const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
+    const web3 = new Web3(new Web3.providers.HttpProvider("https://data-seed-prebsc-1-s1.binance.org:8545"));
     const contract = new web3.eth.Contract(abiStaking, contractAddress);
 
     try {
@@ -84,7 +84,7 @@ class wallet {
       return res.status(400).json({ error: "Unsupported chain" });
     }
 
-    const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
+    const web3 = new Web3(new Web3.providers.HttpProvider("https://data-seed-prebsc-1-s1.binance.org:8545"));
     const contract = new web3.eth.Contract(abiStaking, contractAddress);
 
     try {
@@ -121,7 +121,7 @@ class wallet {
         return res.status(400).json({ error: "Unsupported chain" });
     }
 
-    const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
+    const web3 = new Web3(new Web3.providers.HttpProvider("https://data-seed-prebsc-1-s1.binance.org:8545"));
     const contract = new web3.eth.Contract(abiStaking, contractAddress);
 
     try {
