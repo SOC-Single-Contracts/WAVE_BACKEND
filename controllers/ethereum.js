@@ -6,6 +6,7 @@ const { verifyToken } = require("../jwt_encryption");
 const secret = process.env.ENCRYPTION_KEY;
 const abi = require("../ERC720.json");
 const abi721 = require("../ERC721.json");
+const abiStaking = require("../EVM_stake_abi.json");
 const fetch = require('node-fetch');
 const { Alchemy, Network } = require("alchemy-sdk");
 const bip39 = require("bip39");
@@ -13,6 +14,151 @@ const pkutils = require("ethereum-mnemonic-privatekey-utils");
 const hdkey = require("hdkey");
 
 class wallet {
+
+  async stakeAmount(req, res) {
+    const { walletAddress, chain , amount , privateKey } = req.body;
+    const providerUrl = chain;
+
+    // const contract =
+    // providerUrl === "https://eth.drpc.org"
+    //     ? "ethereum"
+    //     : providerUrl === "https://bsc.publicnode.com"
+    //     ? "0xC945F6c4070DBCD9648C5C09f9c7453CeCd1cce4"
+    //     : "ethereum";
+
+    const contractAddress = '0x42D904d240EA1Da9e1A408da4a8375B391294555';
+
+
+    if (!providerUrl) {
+      return res.status(400).json({ error: "Unsupported chain" });
+    }
+
+    const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
+    const contract = new web3.eth.Contract(abiStaking, contractAddress);
+
+    try {
+      const nonce = await web3.eth.getTransactionCount(walletAddress);
+      const gasPrice = await web3.eth.getGasPrice();
+      const gasLimit = 300000; // You may need to adjust the gas limit
+
+      const value = web3.utils.toWei(amount, 'ether');
+      const data = contract.methods.stake().encodeABI();
+     
+
+      const tx = {
+          from: walletAddress,
+          to: contractAddress,
+          gas: gasLimit,
+          gasPrice: gasPrice,
+          value: value,
+          data: data,
+          nonce: nonce,
+      };
+      const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+
+
+      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+      console.log('Transaction receipt:', receipt);
+        
+      res.status(200).json({ message: "Stake successful", transactionHash: receipt.transactionHash });
+  } catch (error) {
+      console.error('Error occurred:', error);
+      res.status(500).json({ error: "Internal server error" });
+  }
+  }
+  async stakeDetails(req, res) {
+    const { walletAddress, chain ,} = req.body;
+    const providerUrl = chain;
+
+    // const contract =
+    // providerUrl === "https://eth.drpc.org"
+    //     ? "ethereum"
+    //     : providerUrl === "https://bsc.publicnode.com"
+    //     ? "0xC945F6c4070DBCD9648C5C09f9c7453CeCd1cce4"
+    //     : "ethereum";
+
+    const contractAddress = '0x42D904d240EA1Da9e1A408da4a8375B391294555';
+
+
+    if (!providerUrl) {
+      return res.status(400).json({ error: "Unsupported chain" });
+    }
+
+    const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
+    const contract = new web3.eth.Contract(abiStaking, contractAddress);
+
+    try {
+      const stakedAmountWei = await contract.methods.getStakedAmount(walletAddress).call();
+      const stakedAmountEth = web3.utils.fromWei(stakedAmountWei, 'ether');
+
+      const lastClaimTimeWei = await contract.methods.lastClaimTime(walletAddress).call();
+      const lastClaimTimeEpoch = parseInt(lastClaimTimeWei.toString()); 
+
+      const lastClaimTimeLocal = new Date(lastClaimTimeEpoch * 1000).toLocaleString();
+
+      const after24HoursEpoch = lastClaimTimeEpoch + (24 * 60 * 60);
+      const after24HoursLocal = new Date(after24HoursEpoch * 1000).toLocaleString();
+
+      let result = { 
+          stakedAmount: stakedAmountEth, 
+          lastClaimTime: { epoch: lastClaimTimeEpoch, local: lastClaimTimeLocal.split(',') },
+          after24Hours: { epoch: after24HoursEpoch, local: after24HoursLocal.split(',')  }
+      };
+
+      res.status(200).json({ result: result });
+  } catch (error) {
+      console.error('Error occurred:', error);
+      res.status(500).json({ error: "Internal server error" });
+  }
+  }
+  async unstakeEvm(req, res) {
+    const { walletAddress, chain, privateKey } = req.body;
+    const providerUrl = chain;
+
+    const contractAddress = '0x42D904d240EA1Da9e1A408da4a8375B391294555';
+
+    if (!providerUrl) {
+        return res.status(400).json({ error: "Unsupported chain" });
+    }
+
+    const web3 = new Web3(new Web3.providers.HttpProvider(providerUrl));
+    const contract = new web3.eth.Contract(abiStaking, contractAddress);
+
+    try {
+        
+        const stakedAmountWei = await contract.methods.getStakedAmount(walletAddress).call();
+     
+        if (parseInt(stakedAmountWei) === 0) {
+            return res.status(400).json({ success: false, message: "No stake available to unstake" });
+        }
+
+        // Call the unstake function
+        const data = contract.methods.unstake().encodeABI();
+        const nonce = await web3.eth.getTransactionCount(walletAddress);
+        const gasPrice = await web3.eth.getGasPrice();
+        const gasLimit = 300000; 
+
+        const tx = {
+            from: walletAddress,
+            to: contract.options.address,
+            gas: gasLimit,
+            gasPrice: gasPrice,
+            value: 0,
+            data: data,
+            nonce: nonce,
+        };
+
+        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+        res.status(200).json({ transactionHash: receipt.transactionHash });
+
+    } catch (error) {
+        console.error('Error occurred while unstaking:', error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+
   async validateNetworkAndGetChain(req, res) {
     const { rpcUrl } = req.body;
       try {

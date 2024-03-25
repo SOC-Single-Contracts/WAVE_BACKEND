@@ -70,6 +70,9 @@ const mongodb = require('./controllers/user');
 const Staking = require('./controllers/stacking')
 
 //Staking
+app.post('/stake_evm', ethereum.stakeAmount);
+app.post('/unstake_evm', ethereum.unstakeEvm);
+app.post('/stake_evm_details', ethereum.stakeDetails);
 app.post('/stake_amount', Staking.stacked);
 app.post('/get_staking', Staking.get_stacked_byWallet);
 app.post('/claim', Staking.claimAmount);
