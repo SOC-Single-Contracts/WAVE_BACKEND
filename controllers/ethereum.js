@@ -67,7 +67,7 @@ class wallet {
   }
   }
   async stakeDetails(req, res) {
-    const { walletAddress, chain ,} = req.body;
+    const { walletAddress, chain } = req.body;
     const providerUrl = chain;
 
     // const contract =
@@ -101,8 +101,8 @@ class wallet {
 
       let result = { 
           stakedAmount: stakedAmountEth, 
-          lastClaimTime: { epoch: lastClaimTimeEpoch, local: lastClaimTimeLocal.split(',') },
-          after24Hours: { epoch: after24HoursEpoch, local: after24HoursLocal.split(',')  }
+          lastClaimTime: { epoch: lastClaimTimeEpoch, local: lastClaimTimeLocal },
+          after24Hours: { epoch: after24HoursEpoch, local: after24HoursLocal }
       };
 
       res.status(200).json({ result: result });
