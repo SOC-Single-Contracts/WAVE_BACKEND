@@ -244,8 +244,9 @@ class TRON {
     const { privateKey, contractAddress, toAddress, amount } = req.body;
     const tronWeb = new TronWeb({
         fullHost: NETWORK,
-        privateKey: privateKey,
-    });
+    }); 
+
+    console.log(req.body)
 
     try {
         // Ensure all required parameters are provided
@@ -274,9 +275,9 @@ class TRON {
 
         // Invoke the transfer method of the token contract
         const transaction = await contract.transfer(toAddress, amount).send();
-
+        console.log("Transaction",transaction)
         // Wait for the transaction to be confirmed
-        await tronWeb.trx.waitForEvent(transaction, 'confirmation');
+        await waitForConfirmation(tronWeb, transaction);
 
         // Check if transaction hash is valid
         if (transaction && transaction.result && transaction.result === true) {
@@ -290,7 +291,11 @@ class TRON {
         // Return appropriate error response
         return res.status(500).json({ success: false, message: "Failed to send tokens", error: error.toString() });
     }
-  }
+}
+
+// Function to wait for transaction confirmation
+
+
 
 
 
@@ -371,5 +376,12 @@ class TRON {
   }
  
 }
-
+async function waitForConfirmation(tronWeb, transaction) {
+  const intervalId = setInterval(async () => {
+      const receipt = await tronWeb.trx.getTransactionInfo(transaction.txid);
+      if (receipt && receipt.receipt && receipt.receipt.result) {
+          clearInterval(intervalId);
+      }
+  }, 1000); // Check every second
+}
 module.exports = new TRON();
