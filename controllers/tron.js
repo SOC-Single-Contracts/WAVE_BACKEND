@@ -318,7 +318,7 @@ class TRON {
               : "https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n";
 
       let data = {
-        balance: balance.toNumber(),
+        balance: `${balance.toNumber()}`,
         coingeckoId: coingeckoData?.id,
         decimals: decimals,
         logo: coinlogo,
