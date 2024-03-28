@@ -12,11 +12,89 @@ const { Alchemy, Network } = require("alchemy-sdk");
 const bip39 = require("bip39");
 const pkutils = require("ethereum-mnemonic-privatekey-utils");
 const hdkey = require("hdkey");
+const {
+  AllbridgeCoreSdk,
+  ChainSymbol,
+  Messenger,
+} = require("@allbridge/bridge-core-sdk");
+
 
 class wallet {
+  async bridgingEVM_tron(req, res) {
+    const {
+      fromAddress,
+      toAddress,
+      in_symbol,
+      out_symbol,
+      chain,
+      amount,
+      privateKey,
+    } = req.body;
+
+console.log(req.body)
+
+
+    const providerUrl = chain;
+    const web3s = new Web3(providerUrl);
+
+    if (!providerUrl) {
+      return res.status(400).json({ error: "Unsupported chain" });
+    }
+
+    // const contract =
+    // providerUrl === "https://eth.drpc.org"
+    //     ? "ethereum"
+    //     : providerUrl === "https://bsc.publicnode.com"
+    //     ? "0xC945F6c4070DBCD9648C5C09f9c7453CeCd1cce4"
+    //     : "ethereum";
+
+    try {
+     
+  const account = web3s.eth.accounts.privateKeyToAccount(privateKey);
+  web3s.eth.accounts.wallet.add(account);
+      // const account = web3.eth.accounts.privateKeyToAccount('0x245cf8585ec5e1ee889afa8cf9b95691ec094003b4749d6f339393782ee68ee1');
+      // web3.eth.accounts.wallet.add(account);
+      const sdk = new AllbridgeCoreSdk({
+        tronRpcUrl: "https://rpc.trongrid.io",
+      });
+      // console.log(await sdk.tokens());
+      const chains = await sdk.chainDetailsMap();
+      const bscChain = chains[ChainSymbol.BSC];
+      const busdToken = bscChain.tokens.find(
+        (token) => token.symbol === in_symbol
+      );
+      // console.log(busdToken);
+      const trxChain = chains[ChainSymbol.TRX];
+      const usdtToken = trxChain.tokens.find(
+        (token) => token.symbol === out_symbol
+      );
+
+      await sdk.bridge.approve(web3, {
+        token: busdToken,
+        owner: fromAddress,
+      });
+
+      const response = await sdk.bridge.send(web3s, {
+        amount: amount,
+        fromAccountAddress: fromAddress,
+        toAccountAddress: toAddress,
+        sourceToken: busdToken,
+        destinationToken: usdtToken,
+        messenger: Messenger.ALLBRIDGE,
+      });
+      console.log("Tokens sent:", response.transactionHash);
+
+      res
+        .status(200)
+        .json({ message: "Bridg Successful", transactionHash: response.transactionHash });
+    } catch (error) {
+      console.error("Error occurred:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
 
   async stakeAmount(req, res) {
-    const { walletAddress, chain , amount , privateKey } = req.body;
+    const { walletAddress, chain, amount, privateKey } = req.body;
     const providerUrl = chain;
 
     // const contract =
@@ -26,14 +104,17 @@ class wallet {
     //     ? "0xC945F6c4070DBCD9648C5C09f9c7453CeCd1cce4"
     //     : "ethereum";
 
-    const contractAddress = '0x42D904d240EA1Da9e1A408da4a8375B391294555';
-
+    const contractAddress = "0x42D904d240EA1Da9e1A408da4a8375B391294555";
 
     if (!providerUrl) {
       return res.status(400).json({ error: "Unsupported chain" });
     }
 
-    const web3 = new Web3(new Web3.providers.HttpProvider("https://data-seed-prebsc-1-s1.binance.org:8545"));
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(
+        "https://data-seed-prebsc-1-s1.binance.org:8545"
+      )
+    );
     const contract = new web3.eth.Contract(abiStaking, contractAddress);
 
     try {
@@ -41,30 +122,35 @@ class wallet {
       const gasPrice = await web3.eth.getGasPrice();
       const gasLimit = 300000; // You may need to adjust the gas limit
 
-      const value = web3.utils.toWei(amount, 'ether');
+      const value = web3.utils.toWei(amount, "ether");
       const data = contract.methods.stake().encodeABI();
-     
 
       const tx = {
-          from: walletAddress,
-          to: contractAddress,
-          gas: gasLimit,
-          gasPrice: gasPrice,
-          value: value,
-          data: data,
-          nonce: nonce,
+        from: walletAddress,
+        to: contractAddress,
+        gas: gasLimit,
+        gasPrice: gasPrice,
+        value: value,
+        data: data,
+        nonce: nonce,
       };
       const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
 
+      const receipt = await web3.eth.sendSignedTransaction(
+        signedTx.rawTransaction
+      );
+      console.log("Transaction receipt:", receipt);
 
-      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-      console.log('Transaction receipt:', receipt);
-        
-      res.status(200).json({ message: "Stake successful", transactionHash: receipt.transactionHash });
-  } catch (error) {
-      console.error('Error occurred:', error);
+      res
+        .status(200)
+        .json({
+          message: "Stake successful",
+          transactionHash: receipt.transactionHash,
+        });
+    } catch (error) {
+      console.error("Error occurred:", error);
       res.status(500).json({ error: "Internal server error" });
-  }
+    }
   }
   async stakeDetails(req, res) {
     const { walletAddress, chain } = req.body;
@@ -77,101 +163,119 @@ class wallet {
     //     ? "0xC945F6c4070DBCD9648C5C09f9c7453CeCd1cce4"
     //     : "ethereum";
 
-    const contractAddress = '0x42D904d240EA1Da9e1A408da4a8375B391294555';
-
+    const contractAddress = "0x42D904d240EA1Da9e1A408da4a8375B391294555";
 
     if (!providerUrl) {
       return res.status(400).json({ error: "Unsupported chain" });
     }
 
-    const web3 = new Web3(new Web3.providers.HttpProvider("https://data-seed-prebsc-1-s1.binance.org:8545"));
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(
+        "https://data-seed-prebsc-1-s1.binance.org:8545"
+      )
+    );
     const contract = new web3.eth.Contract(abiStaking, contractAddress);
 
     try {
-      const stakedAmountWei = await contract.methods.getStakedAmount(walletAddress).call();
-      const stakedAmountEth = web3.utils.fromWei(stakedAmountWei, 'ether');
+      const stakedAmountWei = await contract.methods
+        .getStakedAmount(walletAddress)
+        .call();
+      const stakedAmountEth = web3.utils.fromWei(stakedAmountWei, "ether");
 
-      const lastClaimTimeWei = await contract.methods.lastClaimTime(walletAddress).call();
-      const lastClaimTimeEpoch = parseInt(lastClaimTimeWei.toString()); 
+      const lastClaimTimeWei = await contract.methods
+        .lastClaimTime(walletAddress)
+        .call();
+      const lastClaimTimeEpoch = parseInt(lastClaimTimeWei.toString());
 
-      const lastClaimTimeLocal = new Date(lastClaimTimeEpoch * 1000).toLocaleString();
+      const lastClaimTimeLocal = new Date(
+        lastClaimTimeEpoch * 1000
+      ).toLocaleString();
 
-      const after24HoursEpoch = lastClaimTimeEpoch + (24 * 60 * 60);
-      const after24HoursLocal = new Date(after24HoursEpoch * 1000).toLocaleString();
+      const after24HoursEpoch = lastClaimTimeEpoch + 24 * 60 * 60;
+      const after24HoursLocal = new Date(
+        after24HoursEpoch * 1000
+      ).toLocaleString();
 
-      let result = { 
-          stakedAmount: stakedAmountEth, 
-          lastClaimTime: { epoch: lastClaimTimeEpoch, local: lastClaimTimeLocal },
-          after24Hours: { epoch: after24HoursEpoch, local: after24HoursLocal }
+      let result = {
+        stakedAmount: stakedAmountEth,
+        lastClaimTime: { epoch: lastClaimTimeEpoch, local: lastClaimTimeLocal },
+        after24Hours: { epoch: after24HoursEpoch, local: after24HoursLocal },
       };
 
       res.status(200).json({ result: result });
-  } catch (error) {
-      console.error('Error occurred:', error);
+    } catch (error) {
+      console.error("Error occurred:", error);
       res.status(500).json({ error: "Internal server error" });
-  }
+    }
   }
   async unstakeEvm(req, res) {
     const { walletAddress, chain, privateKey } = req.body;
     const providerUrl = chain;
 
-    const contractAddress = '0x42D904d240EA1Da9e1A408da4a8375B391294555';
+    const contractAddress = "0x42D904d240EA1Da9e1A408da4a8375B391294555";
 
     if (!providerUrl) {
-        return res.status(400).json({ error: "Unsupported chain" });
+      return res.status(400).json({ error: "Unsupported chain" });
     }
 
-    const web3 = new Web3(new Web3.providers.HttpProvider("https://data-seed-prebsc-1-s1.binance.org:8545"));
+    const web3 = new Web3(
+      new Web3.providers.HttpProvider(
+        "https://data-seed-prebsc-1-s1.binance.org:8545"
+      )
+    );
     const contract = new web3.eth.Contract(abiStaking, contractAddress);
 
     try {
-        
-        const stakedAmountWei = await contract.methods.getStakedAmount(walletAddress).call();
-     
-        if (parseInt(stakedAmountWei) === 0) {
-            return res.status(400).json({ success: false, message: "No stake available to unstake" });
-        }
+      const stakedAmountWei = await contract.methods
+        .getStakedAmount(walletAddress)
+        .call();
 
-        // Call the unstake function
-        const data = contract.methods.unstake().encodeABI();
-        const nonce = await web3.eth.getTransactionCount(walletAddress);
-        const gasPrice = await web3.eth.getGasPrice();
-        const gasLimit = 300000; 
+      if (parseInt(stakedAmountWei) === 0) {
+        return res
+          .status(400)
+          .json({ success: false, message: "No stake available to unstake" });
+      }
 
-        const tx = {
-            from: walletAddress,
-            to: contract.options.address,
-            gas: gasLimit,
-            gasPrice: gasPrice,
-            value: 0,
-            data: data,
-            nonce: nonce,
-        };
+      // Call the unstake function
+      const data = contract.methods.unstake().encodeABI();
+      const nonce = await web3.eth.getTransactionCount(walletAddress);
+      const gasPrice = await web3.eth.getGasPrice();
+      const gasLimit = 300000;
 
-        const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
-        const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-        res.status(200).json({ transactionHash: receipt.transactionHash });
+      const tx = {
+        from: walletAddress,
+        to: contract.options.address,
+        gas: gasLimit,
+        gasPrice: gasPrice,
+        value: 0,
+        data: data,
+        nonce: nonce,
+      };
 
+      const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+      const receipt = await web3.eth.sendSignedTransaction(
+        signedTx.rawTransaction
+      );
+      res.status(200).json({ transactionHash: receipt.transactionHash });
     } catch (error) {
-        console.error('Error occurred while unstaking:', error);
-        res.status(500).json({ error: "Internal server error" });
+      console.error("Error occurred while unstaking:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
-}
-
+  }
 
   async validateNetworkAndGetChain(req, res) {
     const { rpcUrl } = req.body;
-      try {
-          const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
-          const chainId = await web3.eth.getChainId();
-          const data = { success: true, id: Number(chainId.toString()) };
-          return res.json(data);
-      } catch (error) {
-        const data = { success: false, error: error.message };
-          return res.json(data);
-      }
+    try {
+      const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
+      const chainId = await web3.eth.getChainId();
+      const data = { success: true, id: Number(chainId.toString()) };
+      return res.json(data);
+    } catch (error) {
+      const data = { success: false, error: error.message };
+      return res.json(data);
+    }
   }
- 
+
   async createAccount(req, res) {
     try {
       const web3 = new Web3();
@@ -188,13 +292,13 @@ class wallet {
       const web3 = new Web3();
       const memonic = bip39.generateMnemonic();
       const privateKey = pkutils.getPrivateKeyFromMnemonic(memonic);
-      const address = web3.eth.accounts.privateKeyToAccount("0x"+privateKey);
+      const address = web3.eth.accounts.privateKeyToAccount("0x" + privateKey);
       const accCreate = {
         mnemonic: memonic,
-        privateKey: "0x"+privateKey,
+        privateKey: "0x" + privateKey,
         address: address.address,
       };
-      console.log(accCreate)
+      console.log(accCreate);
       const data = jwt.sign(accCreate, secret);
       return res.json(data);
     } catch (error) {
@@ -227,7 +331,7 @@ class wallet {
 
   async importAccountMemonic(req, res) {
     const { mnemonic } = req.body;
-    console.log(req.body)
+    console.log(req.body);
     if (!mnemonic || typeof mnemonic !== "string") {
       return res.status(400).json({ error: "Invalid memonic key" });
     }
@@ -239,20 +343,24 @@ class wallet {
       if (keyValidated) {
         const seed = bip39.mnemonicToSeedSync(mnemonic);
         const root = hdkey.fromMasterSeed(seed);
-        const privateKey = root.derive("m/44'/60'/0'/0/0")._privateKey.toString("hex");
-        const address = web3.eth.accounts.privateKeyToAccount("0x"+privateKey);
+        const privateKey = root
+          .derive("m/44'/60'/0'/0/0")
+          ._privateKey.toString("hex");
+        const address = web3.eth.accounts.privateKeyToAccount(
+          "0x" + privateKey
+        );
         const impCreate = {
-          privateKey:"0x"+privateKey,
-          address: address.address
+          privateKey: "0x" + privateKey,
+          address: address.address,
         };
-        console.log(impCreate)
+        console.log(impCreate);
         const data = jwt.sign(impCreate, secret);
         return res.json(data);
       } else {
-          res.status(400).send({ error: "Invalid Mnemonics" });
+        res.status(400).send({ error: "Invalid Mnemonics" });
       }
     } catch (error) {
-        res.status(500).send({ error: error });
+      res.status(500).send({ error: error });
     }
   }
 
@@ -339,7 +447,7 @@ class wallet {
             const coingeckoData = await coingeckoResponse.json();
             const coinlogo = coingeckoData.image
               ? coingeckoData.image.large
-              : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRwkdP1O0eDqny2iNuYwZHxn5SR8fLHBiLWqt03X8PK3b7mPawB";
+              : "https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n";
 
             if (coinlogo) {
               const data = {

@@ -6,7 +6,7 @@ const bip39 = require('bip39')
 const bip32 = require('bip32')
 const bitcoin = require('bitcoinjs-lib');
 const bs58 = require('bs58');
-
+const abi = require("../tron_erc720.json");
 // const { hdkey } = require('ethereum-cryptography/bip32');
 const { publicKeyConvert } = require('ethereum-cryptography/secp256k1');
 const { bufferToHex } = require('ethereum-cryptography/utils');
@@ -25,6 +25,28 @@ let testnet = 'https://api.shasta.trongrid.io'
 let mainnet = 'https://api.trongrid.io'
 
 const NETWORK = mainnet
+
+async function getTokenDetailsFromCoinGecko(tokenNameOrSymbol) {
+  try {
+      const response = await fetch(`https://api.coingecko.com/api/v3/coins/list`);
+      const coinList = await response.json();
+
+      const token = coinList.find(coin => 
+          coin.name.toLowerCase() === tokenNameOrSymbol.toLowerCase() || 
+          coin.symbol.toLowerCase() === tokenNameOrSymbol.toLowerCase()
+      );
+
+      if (token) {
+          console.log('CoinGecko ID for', tokenNameOrSymbol, ':', token.id);
+          console.log('Image URL:', token.image);
+      } else {
+          console.log('Token not found on CoinGecko.');
+      }
+  } catch (error) {
+      console.error('Error occurred while fetching token details from CoinGecko:', error);
+  }
+}
+
 class TRON {
 
   async createAccount(req, res) {
@@ -214,6 +236,102 @@ class TRON {
     } catch (error) {
       console.error('Error sending TRX:', error);
       return res.status(500).json({ success: false, message: "Failed to send TRX", error: error.toString() });
+    }
+  }
+
+
+  async transferTokens(req, res) {
+    const { privateKey, contractAddress, toAddress, amount } = req.body;
+    const tronWeb = new TronWeb({
+        fullHost: NETWORK,
+        privateKey: privateKey,
+    });
+
+    try {
+        // Ensure all required parameters are provided
+        if (!privateKey || !contractAddress || !toAddress || !amount) {
+            throw new Error('Missing required parameters');
+        }
+
+        // Set the private key and address
+        tronWeb.setPrivateKey(privateKey);
+        tronWeb.setAddress(tronWeb.address.fromPrivateKey(privateKey));
+
+        // Check if sender's account exists
+        const accountExists = await tronWeb.trx.getAccount(tronWeb.defaultAddress.base58);
+        if (!accountExists) {
+            throw new Error('Sender\'s account does not exist on the Tron blockchain');
+        }
+
+        // Check if recipient's account exists
+        const recipientExists = await tronWeb.trx.getAccount(toAddress);
+        if (!recipientExists) {
+            throw new Error('Recipient\'s account does not exist on the Tron blockchain');
+        }
+
+        // Instantiate the token contract
+        const contract = await tronWeb.contract().at(contractAddress);
+
+        // Invoke the transfer method of the token contract
+        const transaction = await contract.transfer(toAddress, amount).send();
+
+        // Wait for the transaction to be confirmed
+        await tronWeb.trx.waitForEvent(transaction, 'confirmation');
+
+        // Check if transaction hash is valid
+        if (transaction && transaction.result && transaction.result === true) {
+            return res.json({ success: true, message: "Transaction successful", transactionHash: transaction.txid });
+        } else {
+            throw new Error('Failed to send tokens');
+        }
+    } catch (error) {
+        console.error('Error sending tokens:', error);
+
+        // Return appropriate error response
+        return res.status(500).json({ success: false, message: "Failed to send tokens", error: error.toString() });
+    }
+  }
+
+
+
+  async getTokenBalance(req, res) {
+    const { walletAddress, tokenAddress } = req.body;
+    const tronWeb = new TronWeb({
+      fullHost: NETWORK,
+    });
+    tronWeb.setAddress(walletAddress); 
+
+    try {
+      const contract = await tronWeb.contract().at(tokenAddress);
+      const name = await contract.name().call();
+      const symbol = await contract.symbol().call();
+      const decimals = await contract.decimals().call();
+      const totalSupply = await contract.totalSupply().call();
+      const balance = await contract.balanceOf(walletAddress).call();
+      
+      const coingeckoResponse = await fetch(
+        `https://api.coingecko.com/api/v3/coins/tron/contract/${tokenAddress}`
+      );
+      const coingeckoData = await coingeckoResponse.json();
+      const coinlogo = coingeckoData.image
+              ? coingeckoData.image.large
+              : "https://imgs.search.brave.com/LZvcTgeGyJLUz1OoWZfzfZsr1XmG9V-xG6dzzG02cKo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9wbmd0/ZWFtLmNvbS9pbWFn/ZXMvY29pbi1wbmct/MjQwMHgyMzk5XzVl/NzZhNDRjX3RyYW5z/cGFyZW50XzIwMmM1/My5wbmcucG5n";
+
+      let data = {
+        balance: balance.toNumber(),
+        coingeckoId: coingeckoData?.id,
+        decimals: decimals,
+        logo: coinlogo,
+        name: name,
+        rpc: NETWORK,
+        symbol: symbol,
+        totalSupply:totalSupply,
+        token_address: tokenAddress,
+        wallet_address: walletAddress
+      }
+      return res.json(data);
+    } catch (error) {
+      return res.status(500).json({ success: false, message: "Failed to retrieve token balance", error: error.toString() });
     }
   }
   

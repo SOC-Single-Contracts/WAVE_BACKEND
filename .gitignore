@@ -1,6 +1,7 @@
 # Dependency directories
-# node_modules/
+node_modules/
 
 # Envormental Var
 .env
-
+package-lock.json
+/package-lock.json

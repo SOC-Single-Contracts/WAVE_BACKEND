@@ -88,6 +88,8 @@ app.post('/tron-import-mnemonic', TRON.importAccountMemonic);
 app.post('/tron-getbalance', TRON.getBalance);
 app.post('/tron-transactions', TRON.getTransactions);
 app.post('/tron-send', TRON.sendTRX);
+app.post('/tron-send-token', TRON.transferTokens);
+app.post('/tron-imp-token', TRON.getTokenBalance);
 // app.post('/tron-confirm-send', TRON.estimateTRXFee);
 
 // DOGE_routes
@@ -129,6 +131,7 @@ app.post('/get-solTrx-details', transfer.getTrxDetails);
 app.post('/getEstimatedGas_sol', transfer.getExtimatedGas);
 app.post('/getEstimatedGas_soltoken', transfer.getExtimatedGasToken);
 // ethereum_routes
+app.post('/bridgingEVM_Tron', ethereum.bridgingEVM_tron);
 app.post('/validateNetworkAndGetChain', ethereum.validateNetworkAndGetChain);
 app.post('/executeEvmSwap', EvmSwap.evmSwap);
 app.post('/eth-create-account', ethereum.createAccount);

@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@allbridge/bridge-core-sdk": "^3.12.2",
     "@noble/secp256k1": "^2.0.0",
     "@paraswap/sdk": "^6.5.0",
     "@project-serum/anchor": "^0.26.0",
